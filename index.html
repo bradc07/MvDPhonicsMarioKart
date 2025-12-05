@@ -730,7 +730,7 @@
             finishSegment: [0, 1],
             startAngle: -Math.PI / 2,
             startGrid: [
-                {x: 80, y: 240}, {x: 80, y: 270}, {x: 55, y: 250}, {x: 55, y: 280}
+                {x: 90, y: 280}, {x: 90, y: 310}, {x: 70, y: 290}, {x: 70, y: 320}
             ],
             itemBoxes: [
                 {x: 400, y: 70, active: true, type: 'question'},
@@ -949,6 +949,9 @@
     };
     trackImg.onerror = () => { console.error('Failed to load track.png'); trackImgLoaded = false; };
 
+    // Debug counter for logging
+    let pixelDebugCounter = 0;
+
     // Check if a pixel at given canvas coordinates is on the dark tarmac track
     function isPixelOnTrack(canvasX, canvasY) {
         if (!trackCollisionCtx || !trackImgLoaded) return true; // Default to on-track if not ready
@@ -983,8 +986,15 @@
         const isGreen = g > r + 30 && g > b + 30 && g > 100;
         const isRed = r > g + 30 && r > b + 30 && r > 100;
 
-        // Track = dark gray or white, but NOT green or red
-        return (isDarkGray || isWhite) && !isGreen && !isRed;
+        const onTrack = (isDarkGray || isWhite) && !isGreen && !isRed;
+
+        // Debug logging (every 60 frames)
+        pixelDebugCounter++;
+        if (pixelDebugCounter % 60 === 0) {
+            console.log(`Pixel check at (${Math.round(canvasX)}, ${Math.round(canvasY)}) -> img(${imgX}, ${imgY}): RGB(${r},${g},${b}) brightness=${Math.round(brightness)} onTrack=${onTrack}`);
+        }
+
+        return onTrack;
     }
 
     function getAiSpeedMod() {
