@@ -1,0 +1,2803 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Phonics Grand Prix</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Fredoka:wght@400;600&display=swap');
+
+        body {
+            font-family: 'Fredoka', sans-serif;
+            background-color: #1a472a; /* Evergreen Dark Forest Green */
+            overflow: hidden;
+            touch-action: none;
+        }
+
+        #game-container {
+            position: relative;
+            width: 100vw;
+            height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            background: #1a472a;
+        }
+
+        canvas {
+            display: block;
+            width: 100vw;
+            height: 100vh;
+            background: #4ade80; /* Bright grass */
+        }
+
+        .overlay {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.8);
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            z-index: 20;
+            color: white;
+            text-align: center;
+        }
+
+        .modal-card {
+            background: linear-gradient(135deg, #ffffff 0%, #f8fafc 100%);
+            color: #1a472a;
+            padding: 2rem;
+            border-radius: 1.5rem;
+            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.4), 0 0 0 1px rgba(255,255,255,0.1) inset;
+            max-width: 90%;
+            width: 400px;
+            animation: popIn 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+            border: 3px solid #22c55e;
+        }
+
+        .answer-btn {
+            display: block;
+            width: 100%;
+            padding: 1rem;
+            margin-top: 0.75rem;
+            background: linear-gradient(135deg, #f8fafc 0%, #e2e8f0 100%);
+            border: 3px solid #cbd5e1;
+            border-radius: 0.75rem;
+            font-size: 1.25rem;
+            font-weight: 600;
+            transition: all 0.2s;
+            cursor: pointer;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+        }
+
+        .answer-btn:hover {
+            background: linear-gradient(135deg, #dcfce7 0%, #bbf7d0 100%);
+            border-color: #22c55e;
+            transform: translateY(-3px);
+            box-shadow: 0 8px 15px rgba(34, 197, 94, 0.3);
+        }
+
+        .hud {
+            position: absolute;
+            top: 10px;
+            left: 10px;
+            z-index: 10;
+            background: linear-gradient(135deg, rgba(255,255,255,0.95) 0%, rgba(248,250,252,0.95) 100%);
+            padding: 10px 20px;
+            border-radius: 25px;
+            font-weight: bold;
+            color: #1a472a;
+            box-shadow: 0 8px 20px rgba(0,0,0,0.2), 0 0 0 2px rgba(34, 197, 94, 0.3);
+            border: 2px solid rgba(34, 197, 94, 0.5);
+            backdrop-filter: blur(10px);
+        }
+
+        .hud-lap {
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            z-index: 10;
+            background: linear-gradient(135deg, rgba(255,255,255,0.95) 0%, rgba(248,250,252,0.95) 100%);
+            padding: 10px 20px;
+            border-radius: 25px;
+            font-weight: bold;
+            color: #1a472a;
+            box-shadow: 0 8px 20px rgba(0,0,0,0.2), 0 0 0 2px rgba(34, 197, 94, 0.3);
+            border: 2px solid rgba(34, 197, 94, 0.5);
+            backdrop-filter: blur(10px);
+        }
+
+        /* Speed Toggle */
+        .speed-toggle {
+            position: absolute;
+            bottom: 20px;
+            right: 20px;
+            z-index: 10;
+            background: linear-gradient(135deg, rgba(255,255,255,0.95) 0%, rgba(248,250,252,0.95) 100%);
+            padding: 14px 18px;
+            border-radius: 20px;
+            box-shadow: 0 8px 25px rgba(0,0,0,0.25);
+            font-weight: bold;
+            color: #1a472a;
+            border: 2px solid rgba(34, 197, 94, 0.4);
+            backdrop-filter: blur(10px);
+        }
+
+        .speed-toggle-label {
+            font-size: 11px;
+            text-transform: uppercase;
+            color: #555;
+            margin-bottom: 8px;
+            letter-spacing: 1px;
+        }
+
+        .speed-options {
+            display: flex;
+            gap: 8px;
+        }
+
+        .speed-btn {
+            padding: 8px 14px;
+            border: 2px solid #d1d5db;
+            border-radius: 10px;
+            background: linear-gradient(135deg, #ffffff 0%, #f3f4f6 100%);
+            cursor: pointer;
+            font-size: 12px;
+            font-weight: 700;
+            transition: all 0.2s;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+
+        .speed-btn:hover {
+            border-color: #22c55e;
+            transform: translateY(-2px);
+            box-shadow: 0 4px 8px rgba(34, 197, 94, 0.3);
+        }
+
+        .speed-btn.active {
+            background: linear-gradient(135deg, #22c55e 0%, #16a34a 100%);
+            color: white;
+            border-color: #16a34a;
+            box-shadow: 0 4px 12px rgba(34, 197, 94, 0.4);
+        }
+
+        /* Mobile Controls */
+        .controls {
+            position: absolute;
+            bottom: 20px;
+            width: 100%;
+            display: flex;
+            justify-content: space-between;
+            padding: 0 40px;
+            pointer-events: none;
+            z-index: 15;
+        }
+
+        .control-btn {
+            pointer-events: auto;
+            width: 90px;
+            height: 90px;
+            background: linear-gradient(135deg, rgba(255,255,255,0.4) 0%, rgba(255,255,255,0.2) 100%);
+            border: 3px solid rgba(255,255,255,0.8);
+            border-radius: 50%;
+            box-shadow: 0 8px 25px rgba(0,0,0,0.3), inset 0 2px 10px rgba(255,255,255,0.3);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            font-size: 2rem;
+            color: white;
+            user-select: none;
+        }
+        .control-btn:active {
+            background: rgba(255,255,255,0.6);
+        }
+
+        @keyframes popIn {
+            from { opacity: 0; transform: scale(0.8); }
+            to { opacity: 1; transform: scale(1); }
+        }
+
+        .hidden { display: none !important; }
+    </style>
+</head>
+<body>
+
+    <div id="game-container">
+        
+        <!-- Canvas -->
+        <canvas id="gameCanvas"></canvas>
+
+        <!-- HUD -->
+        <div id="hud-pos" class="hud hidden">Position: 1/4</div>
+        <div id="hud-lap" class="hud-lap hidden">Lap: 1/3</div>
+        <div id="hud-score" class="hud hidden" style="top: 50px;">Score: 0/0</div>
+
+        <!-- Difficulty Toggle -->
+        <div id="speed-toggle" class="speed-toggle hidden" style="bottom: 20px;">
+            <div class="speed-toggle-label">Race Spice Level</div>
+            <div class="speed-options">
+                <button class="speed-btn active" id="speed-mild" onclick="setDifficulty('mild')">Mild</button>
+                <button class="speed-btn" id="speed-medium" onclick="setDifficulty('medium')">Medium</button>
+                <button class="speed-btn" id="speed-spicy" onclick="setDifficulty('spicy')">Spicy</button>
+            </div>
+        </div>
+
+        <!-- Start Screen -->
+        <div id="start-screen" class="overlay">
+            <div class="modal-card">
+                <h1 class="text-3xl font-bold mb-2 text-center text-green-900">Phonics Grand Prix</h1>
+                <p class="text-gray-600 mb-6 text-center">Year 2 Edition</p>
+                <div class="space-y-3">
+                    <div class="flex items-center gap-3">
+                        <div class="w-8 h-8 bg-yellow-400 rounded flex items-center justify-center font-bold text-white shadow">?</div>
+                        <p class="text-sm">Yellow boxes = Answer questions! Collect all 3 each lap to cross the finish.</p>
+                    </div>
+                    <div class="flex items-center gap-3">
+                        <div class="w-8 h-8 bg-gradient-to-r from-red-500 via-yellow-500 to-purple-500 rounded flex items-center justify-center font-bold text-white shadow">★</div>
+                        <p class="text-sm">Rainbow boxes (Lap 2+) = Slot Machine!</p>
+                    </div>
+                    <div class="flex items-center gap-3">
+                        <div class="w-8 h-8 bg-green-600 rounded flex items-center justify-center font-bold text-white shadow">✓</div>
+                        <p class="text-sm">Correct = Slow/Freeze opponents!</p>
+                    </div>
+                    <div class="flex items-center gap-3">
+                        <div class="w-8 h-8 bg-red-600 rounded flex items-center justify-center font-bold text-white shadow">✗</div>
+                        <p class="text-sm">Wrong = <span class="font-bold text-red-600">SPIN OUT</span>!</p>
+                    </div>
+                    <div class="flex items-center gap-3">
+                        <div class="w-8 h-8 bg-purple-600 rounded flex items-center justify-center font-bold text-white shadow">📈</div>
+                        <p class="text-sm">Questions get <span class="font-bold text-purple-600">HARDER</span> each lap!</p>
+                    </div>
+                    <div class="flex items-center gap-2">
+                        <span class="text-xl">⚡🐢🍌🛡️❄️🏎️🧹</span>
+                        <p class="text-sm"><span class="font-bold">Power-ups:</span> Lightning, Shells, Bananas, Shields, Mega Freeze, Turbo Dash, Track Sweeper</p>
+                    </div>
+                    <div class="flex items-center gap-2">
+                        <span class="text-xl">👻</span>
+                        <p class="text-sm text-purple-600"><span class="font-bold">Watch out:</span> Ghost curse stops YOU!</p>
+                    </div>
+                </div>
+                <button onclick="showTrackSelection()" class="w-full mt-8 bg-green-800 text-white font-bold py-3 rounded-lg hover:bg-green-700 transition shadow-lg">Choose Your Track!</button>
+            </div>
+        </div>
+
+        <!-- Track Selection Screen -->
+        <div id="track-selection" class="overlay hidden">
+            <div class="modal-card" style="max-width: 500px; max-height: 90vh; overflow-y: auto;">
+                <h1 class="text-2xl font-bold mb-4 text-center text-green-900">Choose Your Track</h1>
+                <p class="text-gray-600 mb-4 text-center text-sm">Pick your race layout, spice level, then choose the learning focus.</p>
+
+                <div class="mb-4">
+                    <h2 class="text-lg font-bold text-green-800 mb-2">Track Shape (no crossovers)</h2>
+                    <div id="shape-buttons" class="grid grid-cols-1 gap-2"></div>
+                </div>
+
+                <div class="mb-4">
+                    <h2 class="text-lg font-bold text-orange-700 mb-2">Difficulty</h2>
+                    <div class="grid grid-cols-3 gap-2">
+                        <button class="speed-btn active" id="shape-mild" onclick="setDifficulty('mild')">Mild</button>
+                        <button class="speed-btn" id="shape-medium" onclick="setDifficulty('medium')">Medium</button>
+                        <button class="speed-btn" id="shape-spicy" onclick="setDifficulty('spicy')">Spicy</button>
+                    </div>
+                </div>
+
+                <h2 class="text-lg font-bold text-green-800 mb-2">Learning Track</h2>
+                <p class="text-gray-600 mb-4 text-center text-sm">Each track focuses on different phonics skills!</p>
+                <div class="space-y-3" id="track-buttons">
+                    <!-- Track buttons injected by JS -->
+                </div>
+                <button onclick="hideTrackSelection()" class="w-full mt-4 bg-gray-400 text-white font-bold py-2 rounded-lg hover:bg-gray-500 transition">Back</button>
+            </div>
+        </div>
+
+        <!-- Quiz Modal -->
+        <div id="quiz-modal" class="overlay hidden">
+            <div class="modal-card" style="max-width: 600px;">
+                <div id="difficulty-badge" class="inline-block px-3 py-1 rounded-full text-xs font-bold mb-3 bg-green-200 text-green-800">Easy</div>
+                <div id="passage-container" class="hidden mb-4 p-4 bg-blue-50 rounded-lg border-2 border-blue-200">
+                    <div class="flex items-start gap-2 mb-2">
+                        <span class="text-2xl">📖</span>
+                        <h3 class="font-bold text-blue-900">Read this story:</h3>
+                    </div>
+                    <p id="passage-text" class="text-base leading-relaxed text-gray-800"></p>
+                </div>
+                <h2 id="question-text" class="text-xl font-bold mb-4 text-center">Question goes here</h2>
+                <div id="options-container">
+                    <!-- Buttons injected via JS -->
+                </div>
+            </div>
+        </div>
+
+        <!-- Slot Machine -->
+        <div id="slot-machine" class="overlay hidden">
+            <div class="modal-card text-center">
+                <h1 class="text-3xl font-bold mb-4 text-yellow-600">POWER-UP!</h1>
+                <div class="bg-gradient-to-b from-yellow-400 to-yellow-600 p-8 rounded-xl shadow-2xl mb-4">
+                    <div id="slot-display" class="text-8xl mb-4 h-32 flex items-center justify-center">
+                        ⚡
+                    </div>
+                    <p class="text-xl font-bold text-white" id="slot-name">Lightning Strike</p>
+                </div>
+                <p class="text-sm text-gray-600">Get ready...</p>
+            </div>
+        </div>
+
+        <!-- Game Over Screen -->
+        <div id="game-over" class="overlay hidden">
+            <div class="modal-card text-center" style="max-width: 600px; max-height: 90vh; overflow-y: auto;">
+                <h1 class="text-4xl font-bold mb-4">Race Over!</h1>
+                <p id="final-place" class="text-2xl font-bold text-green-800 mb-2">You finished 1st!</p>
+                <div id="score-summary" class="mb-4 p-4 bg-gray-100 rounded-lg">
+                    <p class="text-lg font-bold">Your Score: <span id="final-score" class="text-green-600">0/0</span></p>
+                    <p id="score-percentage" class="text-sm text-gray-600">0% correct</p>
+                </div>
+                <div id="encouragement" class="mb-4 p-4 bg-green-50 border-2 border-green-200 rounded-lg text-left">
+                    <h2 class="text-lg font-bold text-green-800 mb-1">Great driving!</h2>
+                    <p id="encouragement-text" class="text-sm text-green-700">You finished strong—keep practicing to get every answer right!</p>
+                </div>
+                <div id="award-banner" class="mb-4 p-4 bg-indigo-50 border-2 border-indigo-200 rounded-lg text-left hidden">
+                    <div class="flex items-center justify-between mb-2">
+                        <h2 class="text-lg font-bold text-indigo-900">Special Award</h2>
+                        <span id="award-label" class="px-3 py-1 text-xs font-bold rounded-full bg-indigo-100 text-indigo-800">Consistency Cup</span>
+                    </div>
+                    <p id="award-criteria" class="text-sm text-indigo-800">Earned by keeping accuracy high across lots of questions.</p>
+                </div>
+                <div class="mb-4 p-4 bg-white border-2 border-gray-100 rounded-lg shadow-sm">
+                    <div class="flex items-center justify-between mb-3">
+                        <h2 class="text-lg font-bold text-gray-800">Race Highlights</h2>
+                        <span id="performance-badge" class="px-3 py-1 text-xs font-bold rounded-full bg-green-100 text-green-800">Learning Legend</span>
+                    </div>
+                    <div class="grid grid-cols-2 gap-3 text-left text-sm">
+                        <div class="p-3 bg-gray-50 rounded-lg">
+                            <p class="text-gray-500 text-xs uppercase tracking-wide">Accuracy</p>
+                            <p class="text-2xl font-extrabold text-gray-900" id="stat-accuracy">0%</p>
+                            <div class="mt-2 w-full bg-gray-200 rounded-full h-2">
+                                <div id="accuracy-bar" class="h-2 rounded-full bg-green-500" style="width: 0%"></div>
+                            </div>
+                        </div>
+                        <div class="p-3 bg-gray-50 rounded-lg">
+                            <p class="text-gray-500 text-xs uppercase tracking-wide">Best Correct Streak</p>
+                            <p class="text-2xl font-extrabold text-gray-900" id="stat-streak">0</p>
+                            <p class="text-xs text-gray-500">Keep chaining right answers to level up!</p>
+                        </div>
+                        <div class="p-3 bg-gray-50 rounded-lg">
+                            <p class="text-gray-500 text-xs uppercase tracking-wide">Avg. Answer Time</p>
+                            <p class="text-2xl font-extrabold text-gray-900" id="stat-time">0s</p>
+                            <p class="text-xs text-gray-500">Quick and careful wins the lap!</p>
+                        </div>
+                        <div class="p-3 bg-gray-50 rounded-lg">
+                            <p class="text-gray-500 text-xs uppercase tracking-wide">Race Time</p>
+                            <p class="text-2xl font-extrabold text-gray-900" id="stat-race-time">0s</p>
+                            <p class="text-xs text-gray-500">From green light to finish line.</p>
+                        </div>
+                    </div>
+                </div>
+                <div id="growth-tips" class="mb-4 p-4 bg-blue-50 border-2 border-blue-200 rounded-lg text-left hidden">
+                    <h2 class="text-lg font-bold text-blue-900 mb-1">Next Race Power-Ups</h2>
+                    <ul id="growth-list" class="list-disc list-inside text-sm text-blue-800 space-y-1"></ul>
+                </div>
+                <div id="review-section" class="hidden text-left mb-4">
+                    <h2 class="text-xl font-bold mb-1 text-red-600 text-center">Let's Learn From Our Mistakes!</h2>
+                    <p class="text-sm text-gray-700 mb-3 text-center">Tap an answer below to fix it and see why it's correct.</p>
+                    <div id="wrong-answers-list" class="space-y-4">
+                        <!-- Wrong answers injected here -->
+                    </div>
+                </div>
+                <div class="flex gap-3">
+                    <button onclick="location.reload()" class="flex-1 bg-blue-600 text-white font-bold py-3 px-4 rounded-lg hover:bg-blue-500 shadow-lg">Race Again</button>
+                    <button id="review-btn" onclick="toggleReview()" class="flex-1 bg-purple-600 text-white font-bold py-3 px-4 rounded-lg hover:bg-purple-500 shadow-lg hidden">Review Mistakes</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Mobile Controls (Visible on touch devices or small screens) -->
+        <div id="mobile-controls" class="controls hidden md:hidden">
+            <div class="control-btn" id="btn-left">←</div>
+            <div class="control-btn" id="btn-right">→</div>
+        </div>
+    </div>
+
+<script>
+    /**
+     * Year 2 Educational Content - Organized by Skill Tracks
+     * Each track focuses on specific phonics skills
+     */
+
+    // TRACK DEFINITIONS - Each track has a theme, color, and skill-specific questions
+    const TRACKS = [
+        {
+            id: 'spelling-patterns',
+            name: 'Spelling Speedway',
+            icon: '✏️',
+            color: '#22c55e',
+            description: 'Common spelling patterns & tricky words',
+            questions: {
+                easy: [
+                    { q: "Choose the correct spelling:", options: ["Nite", "Night", "Nigt"], a: 1, explanation: "'Night' is correct. The 'igh' is a special spelling for the long 'i' sound." },
+                    { q: "Which is spelled right?", options: ["Sed", "Said", "Sayd"], a: 1, explanation: "'Said' is correct. This is a tricky word - it doesn't sound like it's spelled!" },
+                    { q: "Pick the correct spelling:", options: ["Wen", "When", "Whn"], a: 1, explanation: "'When' is correct. It starts with 'wh' and has an 'e' in the middle." },
+                    { q: "Which is a real word?", options: ["Frog", "Frug", "Frag"], a: 0, explanation: "'Frog' is the real word - it's a green animal that hops and says ribbit!" },
+                    { q: "Correct spelling?", options: ["Thay", "They", "Thei"], a: 1, explanation: "'They' is correct. This is a tricky word you need to remember - t-h-e-y." },
+                    { q: "Spot the tricky word:", options: ["Becaws", "Because", "Becauss"], a: 1, explanation: "'Because' is a common exception word. Remember the rhyme 'big elephants can always understand small elephants'!" },
+                    { q: "Which word is spelled correctly?", options: ["House", "Howse", "Housse"], a: 0, explanation: "'House' has the sneaky 'ou' that sounds like /ow/." },
+                    { q: "Choose the right ending:", options: ["Play", "Plae", "Plei"], a: 0, explanation: "'Play' uses 'ay' for the long a sound at the end." },
+                    { q: "Which tricky word is right?", options: ["People", "Peaple", "Peopel"], a: 0, explanation: "'People' is correct. Say it like 'pee-pul' to remember the 'eo'." },
+                    { q: "Find the correct spelling:", options: ["Floor", "Flor", "Flloor"], a: 0, explanation: "'Floor' has the double 'o' to make the /or/ sound." }
+                ],
+                medium: [
+                    { q: "Finish the word: Hap__", options: ["py", "pie", "pee"], a: 0, explanation: "'Happy' ends with 'py'. When adding 'y' to make a word happy-sounding, we use 'py'." },
+                    { q: "Past tense of 'jump':", options: ["Jumped", "Jumpt", "Jumpd"], a: 0, explanation: "'Jumped' is correct. We add 'ed' to make past tense, and here it sounds like /t/." },
+                    { q: "Plural of 'baby':", options: ["Babys", "Babies", "Babyes"], a: 1, explanation: "'Babies' is correct. When a word ends in 'y', change the 'y' to 'i' and add 'es'." },
+                    { q: "Past tense of 'stop':", options: ["Stoped", "Stopped", "Stopt"], a: 1, explanation: "'Stopped' is correct. We double the 'p' before adding 'ed' because 'stop' has a short vowel." },
+                    { q: "Plural of 'fox':", options: ["Foxs", "Foxes", "Foxies"], a: 1, explanation: "'Foxes' is correct. Words ending in 'x' need 'es' to make them plural." },
+                    { type: 'drag', q: "Drag the tricky word to finish the sentence: '____ are going to the park.'", options: ["They", "Thay", "Thei"], a: 0, answer: "They", explanation: "'They' is the tricky word spelled t-h-e-y. It doesn't follow the sound you hear." },
+                    { type: 'drag', q: "Drag the correct word: 'I can spell it ______ I practise.'", options: ["because", "becos", "becosz"], a: 0, answer: "because", explanation: "'Because' is an exception word. Use 'be-cause' to remember the parts." },
+                    { q: "Pick the right homophone:", options: ["There", "Their", "They're"], a: 1, explanation: "'Their' shows something belongs to them. Look for the 'ir' like in 'pair'—their pair of shoes." },
+                    { q: "Which ending makes sense?", options: ["Hoping", "Hopeing", "Hopeingg"], a: 0, explanation: "Drop the 'e' before adding 'ing' to get 'hoping'." },
+                    { q: "Choose the tricky word:", options: ["After", "Aftur", "Aphter"], a: 0, explanation: "'After' has the /f/ sound spelled with 'ft'." }
+                ],
+                hard: [
+                    { q: "Correct spelling:", options: ["Beutiful", "Beautiful", "Beatiful"], a: 1, explanation: "'Beautiful' is correct. Remember: b-e-a-u-t-i-f-u-l. 'Beau' means beautiful in French!" },
+                    { q: "Add suffix: happy + est =", options: ["Happyest", "Happiest", "Hapiest"], a: 1, explanation: "'Happiest' is correct. Change 'y' to 'i' before adding 'est'." },
+                    { q: "Past tense of 'try':", options: ["Tryed", "Tried", "Tryd"], a: 1, explanation: "'Tried' is correct. Change 'y' to 'i' before adding 'ed'." },
+                    { q: "Choose the tricky word:", options: ["Should", "Shoud", "Shood"], a: 0, explanation: "'Should' is correct. The 'oul' is silent - we just say /shud/. Same pattern in 'could' and 'would'." },
+                    { q: "Correct spelling:", options: ["Diffrent", "Different", "Diferent"], a: 1, explanation: "'Different' is correct. It has two 'f's and an 'e' - dif-fer-ent." },
+                    { type: 'drag', q: "Drag the correct tricky word: 'The boy scored a goal ______ he aimed carefully.'", options: ["because", "becaus", "becoz"], a: 0, answer: "because", explanation: "'Because' links the reason. It's spelled b-e-c-a-u-s-e." },
+                    { type: 'drag', q: "Drag the missing word: 'My friends and I will meet ______ the stadium.'", options: ["at", "att", "et"], a: 0, answer: "at", explanation: "'At' is the correct short word to show the place." },
+                    { q: "Choose the exception word:", options: ["People", "Peepol", "Peopal"], a: 0, explanation: "'People' doesn't sound like it's spelled. Remember 'eo' makes the /ee/ sound here." },
+                    { q: "Which spelling is correct?", options: ["Water", "Woter", "Waterr"], a: 0, explanation: "'Water' has the /or/ sound spelled with 'a'." },
+                    { q: "Pick the correct suffix:", options: ["Caring", "Careing", "Caaring"], a: 0, explanation: "Drop the silent 'e' before adding 'ing' to make 'caring'." }
+                ]
+            }
+        },
+        {
+            id: 'comprehension',
+            name: 'Story Street',
+            icon: '📖',
+            color: '#ec4899',
+            description: 'Reading comprehension with Maurits & friends',
+            questions: {
+                easy: [],
+                medium: [],
+                hard: []
+            },
+            isComprehension: true
+        }
+    ];
+
+    // COMPREHENSION PASSAGES (used by Story Street track)
+    const COMPREHENSION_DATA = [
+        {
+            passage: "Maurits and his mum Sophie found a tiny kitten in the garden. It was wet and cold. Sophie wrapped it in a warm towel while Maurits gave it some milk. The kitten purred happily.",
+            questions: [
+                { q: "Where did Maurits and Sophie find the kitten?", options: ["In the house", "In the garden", "At school"], a: 1, explanation: "The story says they found the kitten 'in the garden'. Always look for the exact words in the story!" },
+                { q: "How did the kitten feel at first?", options: ["Happy", "Wet and cold", "Hungry"], a: 1, explanation: "The story tells us 'It was wet and cold.' The kitten felt happy at the END after getting help." },
+                { q: "What did Maurits give the kitten?", options: ["Food", "Milk", "Water"], a: 1, explanation: "The story says 'Maurits gave it some milk.' Sophie wrapped it in the towel, Maurits gave the milk." },
+                { q: "How did the kitten feel at the end?", options: ["Scared", "Happy", "Tired"], a: 1, explanation: "At the end 'The kitten purred happily.' When cats purr, it means they are happy and content!" }
+            ]
+        },
+        {
+            passage: "Maurits loved racing his toy cars with his brother Hugo. His favourite was the red one with yellow stripes. One day, he lost it in the park. Hugo helped him search everywhere but they couldn't find it.",
+            questions: [
+                { q: "What did Maurits love doing?", options: ["Racing toy cars", "Playing football", "Reading"], a: 0, explanation: "The very first sentence tells us 'Maurits loved racing his toy cars.' The first sentence often tells us important information!" },
+                { q: "What colour was his favourite car?", options: ["Blue", "Red with yellow stripes", "Green"], a: 1, explanation: "The story says 'His favourite was the red one with yellow stripes.' Look for describing words (adjectives) in the story." },
+                { q: "Where did he lose it?", options: ["At home", "At school", "In the park"], a: 2, explanation: "The story says 'he lost it in the park.' When you see 'in the park', that tells you the place (location)." },
+                { q: "Who helped Maurits search?", options: ["His mum", "His brother Hugo", "His teacher"], a: 1, explanation: "The story says 'Hugo helped him search everywhere.' Hugo is his brother - look for who helped in the story." }
+            ]
+        },
+        {
+            passage: "The sun was shining brightly. Maurits and his friends Jules and Wilbur decided to go to the beach. They built a giant sandcastle with towers and a moat. They were very proud of it!",
+            questions: [
+                { q: "What was the weather like?", options: ["Rainy", "Sunny", "Cloudy"], a: 1, explanation: "'The sun was shining brightly' tells us it was sunny. When the sun shines, it's a sunny day!" },
+                { q: "Who went to the beach with Maurits?", options: ["Hugo", "Jules and Wilbur", "Sophie"], a: 1, explanation: "The story says 'Maurits and his friends Jules and Wilbur' went to the beach. Read carefully for all the names!" },
+                { q: "What did they build?", options: ["A sandcastle", "A boat", "A house"], a: 0, explanation: "They 'built a giant sandcastle with towers and a moat.' A moat is the water that goes around a castle!" },
+                { q: "How did they feel about their sandcastle?", options: ["Sad", "Proud", "Bored"], a: 1, explanation: "'They were very proud of it!' tells us how they felt. When you're proud, you feel good about what you did." }
+            ]
+        },
+        {
+            passage: "Mr Clay was teaching the class about birds. He told Maurits, Zane and Harvey about how baby birds learn to fly. First they flap their wings in the nest. Then one day, they hop to the edge and whoosh! They fly!",
+            questions: [
+                { q: "Who was teaching the class?", options: ["Mrs Cole", "Mr Clay", "Susan"], a: 1, explanation: "The first sentence says 'Mr Clay was teaching the class.' The beginning often tells us who and what!" },
+                { q: "What was the lesson about?", options: ["Fish", "Birds", "Cars"], a: 1, explanation: "Mr Clay was teaching 'about birds' - specifically about how baby birds learn to fly." },
+                { q: "What do baby birds do first?", options: ["Jump out", "Flap their wings", "Sing"], a: 1, explanation: "The story says 'First they flap their wings in the nest.' Look for words like 'first', 'then', 'next' to find the order!" },
+                { q: "Who was learning with Maurits?", options: ["Jules", "Hugo", "Zane and Harvey"], a: 2, explanation: "The story says 'He told Maurits, Zane and Harvey'. All three friends were learning together." }
+            ]
+        },
+        {
+            passage: "Maurits had a loose tooth. It wobbled when he ate. At breakfast, his dad Floris made him toast with apple slices. Crunch! His tooth came out. He put it under his pillow for the tooth fairy.",
+            questions: [
+                { q: "What was wrong with Maurits's tooth?", options: ["It hurt", "It was loose", "It was dirty"], a: 1, explanation: "The story says 'Maurits had a loose tooth. It wobbled.' A loose tooth wobbles and moves around." },
+                { q: "Who made breakfast?", options: ["Sophie", "Floris", "Hugo"], a: 1, explanation: "'His dad Floris made him toast' - the story tells us Floris is Maurits's dad and he made breakfast." },
+                { q: "What was Maurits eating?", options: ["A banana", "Toast with apple", "Cereal"], a: 1, explanation: "Floris made him 'toast with apple slices.' When you see 'Crunch!' that was him biting the apple!" },
+                { q: "Where did Maurits put his tooth?", options: ["In a box", "Under his pillow", "In the bin"], a: 1, explanation: "'He put it under his pillow for the tooth fairy.' Many children leave teeth under pillows for the tooth fairy!" }
+            ]
+        },
+        {
+            passage: "At school, Mrs Cole asked the class to paint pictures. Maurits painted a racing car while Jules painted flowers. Ms O'Shea came to look and said their pictures were wonderful. Susan helped them clean up afterwards.",
+            questions: [
+                { q: "Who asked the class to paint?", options: ["Mr Clay", "Mrs Cole", "Susan"], a: 1, explanation: "'Mrs Cole asked the class to paint pictures.' She gave the instruction to start painting." },
+                { q: "What did Maurits paint?", options: ["Flowers", "A racing car", "A house"], a: 1, explanation: "'Maurits painted a racing car' - Jules painted the flowers, not Maurits. Read carefully who did what!" },
+                { q: "Who said the pictures were wonderful?", options: ["Mrs Cole", "Ms O'Shea", "Susan"], a: 1, explanation: "'Ms O'Shea came to look and said their pictures were wonderful.' She was the one who said they were wonderful." },
+                { q: "Who helped clean up?", options: ["Susan", "Mr Clay", "Floris"], a: 0, explanation: "'Susan helped them clean up afterwards.' Look for who did the action - Susan helped with cleaning." }
+            ]
+        },
+        {
+            passage: "Maurits went to football practice with his friend Hugo. Coach Zara asked them to pass the ball five times before shooting. Maurits scored a goal and everyone cheered.",
+            questions: [
+                { q: "Who did Maurits go to football with?", options: ["Jules", "Hugo", "Wilbur"], a: 1, explanation: "The passage says 'with his friend Hugo'. Look for the name right after 'with'." },
+                { q: "What did Coach Zara ask them to do first?", options: ["Shoot right away", "Pass five times", "Kick the cones"], a: 1, explanation: "Coach Zara said 'pass the ball five times before shooting.' That was the instruction." },
+                { q: "What happened after Maurits followed the instructions?", options: ["He fell", "He scored a goal", "He went home"], a: 1, explanation: "The story states 'Maurits scored a goal and everyone cheered.'" },
+                { q: "How did the others react?", options: ["They were silent", "They cheered", "They left"], a: 1, explanation: "'Everyone cheered' shows their reaction. Cheering means they were happy!" }
+            ]
+        },
+        {
+            passage: "On Story Street, Maurits imagined driving a blue kart like Mario. He zoomed past the library, waved at Ms O'Shea, and slid around the final corner to cross the finish line first.",
+            questions: [
+                { q: "What colour was Maurits's kart in his story?", options: ["Red", "Blue", "Green"], a: 1, explanation: "It says 'driving a blue kart like Mario'. The colour is given clearly." },
+                { q: "Who did he wave at?", options: ["Coach Zara", "Ms O'Shea", "Mr Clay"], a: 1, explanation: "The passage states he 'waved at Ms O'Shea' when zooming past." },
+                { q: "Where did he imagine racing?", options: ["In a forest", "Past the library", "In the mountains"], a: 1, explanation: "He 'zoomed past the library,' so the race is along Story Street near the library." },
+                { q: "What happened at the end of the race?", options: ["He stopped", "He crashed", "He crossed first"], a: 2, explanation: "The passage says he 'cross the finish line first.'" }
+            ]
+        },
+        {
+            passage: "Maurits wrote his own short comic about a football match. In the story, he and Jules were the strikers, and Wilbur was the speedy winger. They worked together to win 3-2 with a last-minute kick.",
+            questions: [
+                { q: "What did Maurits make?", options: ["A song", "A short comic", "A painting"], a: 1, explanation: "The passage opens with 'Maurits wrote his own short comic.'" },
+                { q: "Who were the strikers?", options: ["Maurits and Jules", "Hugo and Wilbur", "Zane and Harvey"], a: 0, explanation: "It says 'he and Jules were the strikers'." },
+                { q: "What position was Wilbur?", options: ["Goalkeeper", "Speedy winger", "Referee"], a: 1, explanation: "Wilbur was 'the speedy winger'—a winger runs down the side to cross the ball." },
+                { q: "What was the final score in the comic?", options: ["1-0", "3-2", "5-4"], a: 1, explanation: "They 'win 3-2 with a last-minute kick.'" }
+            ]
+        },
+        {
+            passage: "During a rainy afternoon, Maurits and Sophie read a story about a kart race in a forest. The racer had to dodge puddles and fallen leaves. In the end, the kart splashed through a big puddle but still won.",
+            questions: [
+                { q: "What was the weather like?", options: ["Sunny", "Snowy", "Rainy"], a: 2, explanation: "It was 'a rainy afternoon'—that sets the scene." },
+                { q: "Who read with Maurits?", options: ["Hugo", "Sophie", "Coach Zara"], a: 1, explanation: "The passage notes 'Maurits and Sophie read a story' together." },
+                { q: "What did the racer have to dodge?", options: ["Other karts", "Puddles and leaves", "Football cones"], a: 1, explanation: "It says 'dodge puddles and fallen leaves.'" },
+                { q: "What happened at the end?", options: ["The kart stopped", "The kart splashed but won", "The kart broke"], a: 1, explanation: "The racer 'splashed through a big puddle but still won.'" }
+            ]
+        }
+    ];
+
+    // --- Engine Configuration ---
+    const canvas = document.getElementById('gameCanvas');
+    const ctx = canvas.getContext('2d');
+
+    // Game State
+    let gameState = 'start'; // start, racing, quiz, finished
+    let frameId;
+    let currentDifficulty = 'mild'; // mild, medium, spicy
+    let questionsAsked = []; // Track asked questions to avoid repeats
+    let comprehensionPassageUsed = []; // Track used passages
+    let opponentsFrozen = false; // Track if opponents are frozen
+    let freezeEndTime = 0; // Timestamp when freeze ends
+    let opponentsSlowed = false; // Track if opponents are slowed (lightning)
+    let slowEndTime = 0; // Timestamp when slow effect ends
+    let playerShieldUntil = 0; // Timestamp when shield expires
+    let playerBoostUntil = 0; // Timestamp when turbo dash expires
+    let redShells = []; // Active red shells in the game
+    let bananas = []; // Banana peels on track
+    let slotMachineActive = false; // Is slot machine spinning?
+    let slotMachineResult = null; // Result of slot machine
+
+    // Track Selection
+    let selectedTrack = null; // Currently selected track object
+    let currentTrackColor = '#555'; // Track asphalt color (changes per track)
+
+    // Scoring System
+    let score = { correct: 0, total: 0 };
+    let wrongAnswers = []; // Store wrong answers for review
+    let currentQuestion = null; // Currently displayed question (for tracking wrong answers)
+    let currentStreak = 0; // Track consecutive correct answers
+    let bestStreak = 0; // Highest streak for the session
+    let questionStartTime = 0; // Timestamp when a question appears
+    let totalResponseTime = 0; // Sum of all response durations
+    let raceStartTime = 0; // Timestamp when the race begins
+
+    // Speed Presets and difficulty tuning
+    const SPEED_PRESETS = {
+        mild: {
+            MAX_SPEED: 5,
+            BOOST_SPEED: 9.5,
+            OFFROAD_SPEED: 1.7,
+            ACCELERATION: 0.085,
+            TURN_SPEED: 0.055,
+            RED_SHELL_SPEED: 7
+        },
+        medium: {
+            MAX_SPEED: 5.9,
+            BOOST_SPEED: 10.6,
+            OFFROAD_SPEED: 1.85,
+            ACCELERATION: 0.098,
+            TURN_SPEED: 0.06,
+            RED_SHELL_SPEED: 7.6
+        },
+        spicy: {
+            MAX_SPEED: 6.6,
+            BOOST_SPEED: 11.6,
+            OFFROAD_SPEED: 2,
+            ACCELERATION: 0.112,
+            TURN_SPEED: 0.07,
+            RED_SHELL_SPEED: 8.6
+        }
+    };
+
+    const DIFFICULTY_SETTINGS = {
+        mild: {
+            aiBase: 0.26,
+            aiVariance: 0.1,
+            offroadForgiveness: 1.6,
+            description: 'Gentle laps with forgiving grass edges.'
+        },
+        medium: {
+            aiBase: 0.36,
+            aiVariance: 0.12,
+            offroadForgiveness: 1.2,
+            description: 'Balanced pace and snappier rivals.'
+        },
+        spicy: {
+            aiBase: 0.48,
+            aiVariance: 0.14,
+            offroadForgiveness: 1,
+            description: 'Tight lines, faster rivals, hold on!'
+        }
+    };
+
+    // Physics Constants (mutable based on difficulty) - defaults to mild for younger players
+    let MAX_SPEED = SPEED_PRESETS.mild.MAX_SPEED;
+    let BOOST_SPEED = SPEED_PRESETS.mild.BOOST_SPEED;
+    let OFFROAD_SPEED = SPEED_PRESETS.mild.OFFROAD_SPEED;
+    let ACCELERATION = SPEED_PRESETS.mild.ACCELERATION;
+    let TURN_SPEED = SPEED_PRESETS.mild.TURN_SPEED;
+    let RED_SHELL_SPEED = SPEED_PRESETS.mild.RED_SHELL_SPEED;
+    const FRICTION = 0.96;
+    
+    // Base track design (at 800x600 reference)
+    const BASE_WIDTH = 800;
+    const BASE_HEIGHT = 600;
+
+    // Track Logic (Waypoints for AI and Drawing)
+    const TRACK_SHAPES = [
+        {
+            id: 'meadow-oval',
+            name: 'Meadow Oval',
+            description: 'Smooth, wide bends with no crossovers.',
+            points: [
+                {x: 140, y: 300}, {x: 190, y: 170}, {x: 360, y: 120},
+                {x: 630, y: 160}, {x: 700, y: 320}, {x: 640, y: 480},
+                {x: 360, y: 520}, {x: 170, y: 460}, {x: 140, y: 300}
+            ],
+            finishSegment: [2, 3],
+            startAngle: -Math.PI / 8,
+            startGrid: [
+                {x: 200, y: 320}, {x: 200, y: 360}, {x: 170, y: 330}, {x: 170, y: 370}
+            ],
+            itemBoxes: [
+                {x: 320, y: 140, active: true, type: 'question'},
+                {x: 640, y: 340, active: true, type: 'question'},
+                {x: 320, y: 500, active: true, type: 'question'}
+            ],
+            powerupBoxes: [
+                {x: 240, y: 200, active: false, type: 'powerup'},
+                {x: 520, y: 200, active: false, type: 'powerup'},
+                {x: 520, y: 430, active: false, type: 'powerup'}
+            ],
+            trees: [
+                {x: 120, y: 140, size: 0.9}, {x: 720, y: 140, size: 1}, {x: 720, y: 480, size: 1.1},
+                {x: 120, y: 500, size: 1}, {x: 400, y: 300, size: 1.2}
+            ]
+        },
+        {
+            id: 'river-chicane',
+            name: 'River Chicane',
+            description: 'S-curves and short straights by the water.',
+            points: [
+                {x: 140, y: 330}, {x: 240, y: 150}, {x: 460, y: 140},
+                {x: 640, y: 230}, {x: 660, y: 380}, {x: 480, y: 500},
+                {x: 260, y: 500}, {x: 140, y: 380}, {x: 140, y: 330}
+            ],
+            finishSegment: [2, 3],
+            startAngle: -Math.PI / 12,
+            startGrid: [
+                {x: 190, y: 340}, {x: 190, y: 380}, {x: 160, y: 350}, {x: 160, y: 390}
+            ],
+            itemBoxes: [
+                {x: 360, y: 150, active: true, type: 'question'},
+                {x: 640, y: 320, active: true, type: 'question'},
+                {x: 330, y: 480, active: true, type: 'question'}
+            ],
+            powerupBoxes: [
+                {x: 240, y: 230, active: false, type: 'powerup'},
+                {x: 520, y: 260, active: false, type: 'powerup'},
+                {x: 440, y: 420, active: false, type: 'powerup'}
+            ],
+            trees: [
+                {x: 120, y: 120, size: 0.8}, {x: 700, y: 150, size: 1.1}, {x: 730, y: 430, size: 1},
+                {x: 120, y: 480, size: 1}, {x: 430, y: 320, size: 1.1}
+            ]
+        },
+        {
+            id: 'canyon-bridge',
+            name: 'Canyon Bridge Run',
+            description: 'Elevated bridge straight with canyon bends—no ground crossovers.',
+            points: [
+                {x: 170, y: 320}, {x: 240, y: 170}, {x: 500, y: 150},
+                {x: 670, y: 220}, {x: 640, y: 360}, {x: 480, y: 470},
+                {x: 280, y: 500}, {x: 170, y: 380}, {x: 170, y: 320}
+            ],
+            finishSegment: [2, 3],
+            startAngle: -Math.PI / 10,
+            startGrid: [
+                {x: 210, y: 340}, {x: 210, y: 380}, {x: 180, y: 350}, {x: 180, y: 390}
+            ],
+            itemBoxes: [
+                {x: 360, y: 170, active: true, type: 'question'},
+                {x: 660, y: 300, active: true, type: 'question'},
+                {x: 350, y: 490, active: true, type: 'question'}
+            ],
+            powerupBoxes: [
+                {x: 250, y: 240, active: false, type: 'powerup'},
+                {x: 520, y: 240, active: false, type: 'powerup'},
+                {x: 450, y: 410, active: false, type: 'powerup'}
+            ],
+            trees: [
+                {x: 130, y: 150, size: 0.9}, {x: 720, y: 190, size: 1.1}, {x: 720, y: 450, size: 1.2},
+                {x: 130, y: 480, size: 0.95}, {x: 430, y: 330, size: 1.05}
+            ]
+        },
+        {
+            id: 'coast-sprint',
+            name: 'Coastline Sprint',
+            description: 'Long seaside straights and wide sweepers.',
+            points: [
+                {x: 150, y: 320}, {x: 220, y: 180}, {x: 470, y: 140},
+                {x: 670, y: 180}, {x: 700, y: 340}, {x: 560, y: 500},
+                {x: 320, y: 520}, {x: 150, y: 420}, {x: 150, y: 320}
+            ],
+            finishSegment: [3, 4],
+            startAngle: 0,
+            startGrid: [
+                {x: 210, y: 340}, {x: 210, y: 380}, {x: 180, y: 350}, {x: 180, y: 390}
+            ],
+            itemBoxes: [
+                {x: 360, y: 150, active: true, type: 'question'},
+                {x: 680, y: 260, active: true, type: 'question'},
+                {x: 360, y: 500, active: true, type: 'question'}
+            ],
+            powerupBoxes: [
+                {x: 250, y: 230, active: false, type: 'powerup'},
+                {x: 530, y: 210, active: false, type: 'powerup'},
+                {x: 480, y: 430, active: false, type: 'powerup'}
+            ],
+            trees: [
+                {x: 120, y: 150, size: 0.9}, {x: 730, y: 150, size: 1.05}, {x: 740, y: 470, size: 1.1},
+                {x: 120, y: 480, size: 1}, {x: 430, y: 320, size: 1.15}
+            ]
+        }
+    ];
+
+    const QUESTIONS_PER_LAP = 3;
+    let questionsThisLap = 0;
+
+    // Start/Finish band sizing (applied after scaling)
+    const FINISH_BAND_DEPTH = 28;
+    const FINISH_LINE_HEIGHT_FACTOR = 1.6;
+
+    // Get scale factors based on current canvas size
+    function getScale() {
+        return {
+            x: canvas.width / BASE_WIDTH,
+            y: canvas.height / BASE_HEIGHT
+        };
+    }
+
+    let selectedTrackShape = TRACK_SHAPES[0];
+
+    // Scaled track points (updated on resize)
+    let TRACK_POINTS = [];
+    let ITEM_BOXES = [];
+    let POWERUP_BOXES = [];
+    let startGridPositions = [];
+    let trackTrees = [];
+    let trackStartAngle = -Math.PI / 4;
+    let startFinishAnchor = { x: 0, y: 0 };
+    let startFinishAngle = 0;
+
+    function getTrackHalfWidth() {
+        const scale = getScale();
+        const avgScale = (scale.x + scale.y) / 2;
+        return 50 * avgScale;
+    }
+
+    // Calculate offset points from the centerline for crisp bands and edges
+    function offsetTrack(points, offset) {
+        const result = [];
+        for (let i = 0; i < points.length; i++) {
+            const prev = points[(i - 1 + points.length) % points.length];
+            const curr = points[i];
+            const next = points[(i + 1) % points.length];
+
+            const v1x = curr.x - prev.x;
+            const v1y = curr.y - prev.y;
+            const v2x = next.x - curr.x;
+            const v2y = next.y - curr.y;
+
+            // Outward-facing average normal
+            const n1x = -v1y;
+            const n1y = v1x;
+            const n2x = -v2y;
+            const n2y = v2x;
+
+            let nx = n1x + n2x;
+            let ny = n1y + n2y;
+            let len = Math.hypot(nx, ny);
+
+            if (len === 0) {
+                nx = -v1y;
+                ny = v1x;
+                len = Math.hypot(nx, ny);
+            }
+
+            nx /= len;
+            ny /= len;
+
+            result.push({ x: curr.x + nx * offset, y: curr.y + ny * offset });
+        }
+        return result;
+    }
+
+    function fillBand(outerPoints, innerPoints, style) {
+        ctx.save();
+        ctx.beginPath();
+        ctx.moveTo(outerPoints[0].x, outerPoints[0].y);
+        for (let i = 1; i < outerPoints.length; i++) {
+            ctx.lineTo(outerPoints[i].x, outerPoints[i].y);
+        }
+        for (let i = innerPoints.length - 1; i >= 0; i--) {
+            ctx.lineTo(innerPoints[i].x, innerPoints[i].y);
+        }
+        ctx.closePath();
+        ctx.fillStyle = style;
+        ctx.fill();
+        ctx.restore();
+    }
+
+    function updateScaledPositions() {
+        const scale = getScale();
+        const shape = selectedTrackShape || TRACK_SHAPES[0];
+
+        TRACK_POINTS = shape.points.map(p => ({
+            x: p.x * scale.x,
+            y: p.y * scale.y
+        }));
+
+        ITEM_BOXES = shape.itemBoxes.map(b => ({
+            x: b.x * scale.x,
+            y: b.y * scale.y,
+            active: b.active,
+            type: b.type
+        }));
+
+        POWERUP_BOXES = shape.powerupBoxes.map(b => ({
+            x: b.x * scale.x,
+            y: b.y * scale.y,
+            active: b.active,
+            type: b.type
+        }));
+
+        startGridPositions = shape.startGrid.map(p => ({ x: p.x * scale.x, y: p.y * scale.y }));
+        trackTrees = (shape.trees || []).map(t => ({ x: t.x * scale.x, y: t.y * scale.y, size: t.size }));
+
+        // Anchor the start/finish band on a clean straight between configured nodes
+        const segment = shape.finishSegment || [1, 2];
+        const startNode = TRACK_POINTS[segment[0]];
+        const endNode = TRACK_POINTS[segment[1]];
+        startFinishAnchor = {
+            x: (startNode.x + endNode.x) / 2,
+            y: (startNode.y + endNode.y) / 2
+        };
+        startFinishAngle = Math.atan2(endNode.y - startNode.y, endNode.x - startNode.x);
+        trackStartAngle = shape.startAngle ?? startFinishAngle;
+    }
+
+    let lapsTotal = 3;
+
+    // Load Player and AI Kart Images
+    const playerKartImg = new Image();
+    playerKartImg.src = 'mario.png';
+    let playerKartImgLoaded = false;
+    playerKartImg.onload = () => {
+        playerKartImgLoaded = true;
+        console.log('Player kart image loaded successfully!', playerKartImg.width, 'x', playerKartImg.height);
+    };
+    playerKartImg.onerror = () => {
+        console.error('Failed to load player kart image:', playerKartImg.src);
+        playerKartImgLoaded = false;
+    };
+
+    // Load AI Kart Images
+    const warioImg = new Image();
+    warioImg.src = 'wario.png';
+    let warioImgLoaded = false;
+    warioImg.onload = () => { warioImgLoaded = true; console.log('Wario image loaded'); };
+    warioImg.onerror = () => { console.error('Failed to load wario.png'); warioImgLoaded = false; };
+
+    const kongImg = new Image();
+    kongImg.src = 'kong.png';
+    let kongImgLoaded = false;
+    kongImg.onload = () => { kongImgLoaded = true; console.log('Kong image loaded'); };
+    kongImg.onerror = () => { console.error('Failed to load kong.png'); kongImgLoaded = false; };
+
+    const bowserImg = new Image();
+    bowserImg.src = 'bowser.png';
+    let bowserImgLoaded = false;
+    bowserImg.onload = () => { bowserImgLoaded = true; console.log('Bowser image loaded'); };
+    bowserImg.onerror = () => { console.error('Failed to load bowser.png'); bowserImgLoaded = false; };
+
+
+    function getAiSpeedMod() {
+        const config = DIFFICULTY_SETTINGS[currentDifficulty] || DIFFICULTY_SETTINGS.mild;
+        return config.aiBase + Math.random() * config.aiVariance;
+    }
+
+    // --- Classes ---
+
+    class Kart {
+        constructor(x, y, color, isPlayer = false, startOffset = 0, characterImg = null, imgLoaded = false) {
+            this.x = x;
+            this.y = y;
+            this.color = color;
+            this.angle = 0;
+            this.speed = 0;
+            this.isPlayer = isPlayer;
+            this.lap = 1;
+            this.checkpointIndex = 0; // To track progress
+            this.finished = false;
+            this.passedMidpoint = false;
+            this.inFinishZone = false;
+            this.spinUntil = 0; // Timestamp for spin effect
+            this.characterImg = characterImg; // Character image
+            this.imgLoaded = imgLoaded; // Function to check if image is loaded
+
+            // AI specific
+            this.waypointIndex = 1;
+            this.startOffset = startOffset; // Stagger AI start
+            // AI speed tuned by difficulty
+            this.aiSpeedMod = getAiSpeedMod();
+        }
+
+        update() {
+            if (this.finished) return;
+
+            // Check if spinning from red shell
+            if (!this.isPlayer && this.spinUntil > Date.now()) {
+                // Spin in place
+                this.angle += 0.3;
+                this.speed = 0;
+                return;
+            }
+
+            if (this.isPlayer) {
+                // Player Physics handled in Game Loop based on Input
+            } else {
+                // Skip AI updates if opponents are frozen
+                if (!opponentsFrozen) {
+                    this.updateAI();
+                }
+            }
+
+            // Move (AI karts don't move when frozen)
+            if (this.isPlayer || !opponentsFrozen) {
+                this.x += Math.cos(this.angle) * this.speed;
+                this.y += Math.sin(this.angle) * this.speed;
+
+                // Simple friction
+                this.speed *= FRICTION;
+            }
+        }
+
+        updateAI() {
+            // Target next waypoint
+            let target = TRACK_POINTS[this.waypointIndex];
+            
+            // Add a little randomness to AI path so they don't drive in a perfect line
+            let tx = target.x + Math.sin(Date.now()/1000 + this.startOffset)*40;
+            let ty = target.y + Math.cos(Date.now()/1000 + this.startOffset)*40;
+
+            let dx = tx - this.x;
+            let dy = ty - this.y;
+            let dist = Math.sqrt(dx*dx + dy*dy);
+            
+            // Steer towards target
+            let targetAngle = Math.atan2(dy, dx);
+            let angleDiff = targetAngle - this.angle;
+            
+            // Normalize angle
+            while (angleDiff > Math.PI) angleDiff -= Math.PI * 2;
+            while (angleDiff < -Math.PI) angleDiff += Math.PI * 2;
+
+            this.angle += angleDiff * 0.1; // Turn smoothing
+
+            // Accelerate (slower if lightning effect is active)
+            let targetSpeed = MAX_SPEED * this.aiSpeedMod;
+            if (opponentsSlowed) {
+                targetSpeed *= 0.3; // 30% speed during lightning
+            }
+
+            if (this.speed < targetSpeed) {
+                this.speed += ACCELERATION;
+            }
+
+            // Check if reached waypoint
+            if (dist < 100) {
+                this.waypointIndex = (this.waypointIndex + 1) % TRACK_POINTS.length;
+                this.checkpointIndex++;
+                
+                // Lap counting logic for AI (simplified)
+                if (this.waypointIndex === 1) { // 1 is roughly start line index in our array logic
+                    this.lap++;
+                }
+            }
+        }
+
+        draw() {
+            ctx.save();
+            ctx.translate(this.x, this.y);
+            ctx.rotate(this.angle);
+            
+            // Scale up slightly for better visibility
+            ctx.scale(1.2, 1.2);
+
+            // Draw Character Image if loaded, otherwise fallback to procedural drawing
+            const hasImage = this.characterImg && this.imgLoaded();
+
+            if (hasImage) {
+                // Rotate image 90 degrees to face forward
+                ctx.rotate(Math.PI / 2);
+
+                // Calculate aspect ratio to prevent squashing
+                // Target width reduced by additional 30% (49 * 0.7 = 34px)
+                const targetWidth = 34;
+                const scaleFactor = targetWidth / this.characterImg.width;
+                const targetHeight = this.characterImg.height * scaleFactor;
+
+                // Draw centered (note: coordinates are rotated)
+                ctx.drawImage(this.characterImg, -targetWidth / 2, -targetHeight / 2, targetWidth, targetHeight);
+
+                // Rotate back for any effects drawn after
+                ctx.rotate(-Math.PI / 2);
+            }
+
+            // Draw procedural kart if image not loaded
+            if (!hasImage) {
+                // Draw AI Karts (Procedural) OR Player Fallback
+
+                // Shadow
+                ctx.fillStyle = "rgba(0,0,0,0.2)";
+                ctx.beginPath();
+                ctx.ellipse(0, 0, 18, 12, 0, 0, Math.PI*2);
+                ctx.fill();
+
+                // Wheels (Black rubber)
+                ctx.fillStyle = "#1a1a1a";
+                // Rear wheels (wider)
+                ctx.fillRect(-12, -14, 10, 6); // Rear Left
+                ctx.fillRect(-12, 8, 10, 6);   // Rear Right
+                // Front wheels (smaller)
+                ctx.fillRect(8, -13, 8, 5);    // Front Left
+                ctx.fillRect(8, 8, 8, 5);      // Front Right
+
+                // Exhaust Pipes (Silver)
+                ctx.fillStyle = "#9ca3af";
+                ctx.fillRect(-16, -6, 6, 4);
+                ctx.fillRect(-16, 2, 6, 4);
+
+                // Main Body (Color)
+                ctx.fillStyle = this.color;
+                
+                // Side pods/Main block
+                ctx.beginPath();
+                // Rear block
+                ctx.roundRect(-10, -10, 20, 20, 4); 
+                // Front nose
+                ctx.roundRect(5, -6, 15, 12, 6);
+                ctx.fill();
+
+                // White stripe or number plate on nose
+                ctx.fillStyle = "white";
+                ctx.beginPath();
+                ctx.arc(12, 0, 4, 0, Math.PI*2);
+                ctx.fill();
+
+                // Driver Body (Shirt)
+                ctx.fillStyle = this.color; // Or slightly darker?
+                ctx.beginPath();
+                ctx.arc(-2, 0, 7, 0, Math.PI*2);
+                ctx.fill();
+
+                // Steering Wheel (Black ring)
+                ctx.strokeStyle = "#333";
+                ctx.lineWidth = 2;
+                ctx.beginPath();
+                ctx.arc(6, 0, 3, 0, Math.PI*2); // Holding it in front
+                ctx.stroke();
+
+                // Driver Head (Skin)
+                ctx.fillStyle = "#ffdbac";
+                ctx.beginPath();
+                ctx.arc(-2, 0, 5, 0, Math.PI*2);
+                ctx.fill();
+
+                // Helmet (Color with M-logo style accent maybe?)
+                ctx.fillStyle = this.color;
+                ctx.beginPath();
+                ctx.arc(-2, -1, 5.5, Math.PI, 0); // Top half helmet
+                ctx.fill();
+                
+                // Goggles/Visor (Black band)
+                ctx.strokeStyle = "#333";
+                ctx.lineWidth = 1.5;
+                ctx.beginPath();
+                ctx.moveTo(-7, -1);
+                ctx.lineTo(3, -1);
+                ctx.stroke();
+            }
+
+            // Draw freeze effect if opponents are frozen and this is not the player
+            if (!this.isPlayer && opponentsFrozen) {
+                // Blue tint overlay
+                ctx.fillStyle = "rgba(59, 130, 246, 0.4)";
+                ctx.beginPath();
+                ctx.arc(0, 0, 25, 0, Math.PI * 2);
+                ctx.fill();
+
+                // Snowflake/freeze icon
+                ctx.fillStyle = "#ffffff";
+                ctx.font = "bold 20px Arial";
+                ctx.textAlign = "center";
+                ctx.textBaseline = "middle";
+                ctx.fillText("❄", 0, -20);
+            }
+
+            // Draw lightning effect if opponents are slowed
+            if (!this.isPlayer && opponentsSlowed) {
+                // Yellow tint overlay
+                ctx.fillStyle = "rgba(234, 179, 8, 0.3)";
+                ctx.beginPath();
+                ctx.arc(0, 0, 25, 0, Math.PI * 2);
+                ctx.fill();
+
+                // Lightning bolt icon
+                ctx.fillStyle = "#fbbf24";
+                ctx.font = "bold 20px Arial";
+                ctx.textAlign = "center";
+                ctx.textBaseline = "middle";
+                ctx.fillText("⚡", 0, -20);
+            }
+
+            // Draw ghost curse effect if player is cursed
+            if (this.isPlayer && this.ghostCurse && Date.now() < this.ghostCurse) {
+                // Purple tint overlay
+                ctx.fillStyle = "rgba(167, 139, 250, 0.5)";
+                ctx.beginPath();
+                ctx.arc(0, 0, 25, 0, Math.PI * 2);
+                ctx.fill();
+
+                // Ghost icon
+                ctx.fillStyle = "#ffffff";
+                ctx.font = "bold 20px Arial";
+                ctx.textAlign = "center";
+                ctx.textBaseline = "middle";
+                ctx.fillText("👻", 0, -20);
+            }
+
+            // Draw bubble shield effect if active
+            if (this.isPlayer && Date.now() < playerShieldUntil) {
+                ctx.strokeStyle = "rgba(20, 184, 166, 0.8)";
+                ctx.lineWidth = 4;
+                ctx.beginPath();
+                ctx.arc(0, 0, 28, 0, Math.PI * 2);
+                ctx.stroke();
+
+                ctx.fillStyle = "rgba(20, 184, 166, 0.15)";
+                ctx.beginPath();
+                ctx.arc(0, 0, 28, 0, Math.PI * 2);
+                ctx.fill();
+            }
+
+            // Draw turbo dash flames when boost is active
+            if (this.isPlayer && Date.now() < playerBoostUntil) {
+                ctx.fillStyle = "#fb923c";
+                ctx.beginPath();
+                ctx.moveTo(-28, 6);
+                ctx.lineTo(-45, 0);
+                ctx.lineTo(-28, -6);
+                ctx.closePath();
+                ctx.fill();
+
+                ctx.fillStyle = "#f97316";
+                ctx.beginPath();
+                ctx.moveTo(-24, 4);
+                ctx.lineTo(-38, 0);
+                ctx.lineTo(-24, -4);
+                ctx.closePath();
+                ctx.fill();
+            }
+
+            ctx.restore();
+        }
+    }
+
+    class RedShell {
+        constructor(startX, startY, targetKart) {
+            this.x = startX;
+            this.y = startY;
+            this.target = targetKart;
+            this.speed = RED_SHELL_SPEED; // Uses current race speed setting
+            this.active = true;
+        }
+
+        update() {
+            if (!this.active || !this.target) return;
+
+            // Calculate direction to target
+            let dx = this.target.x - this.x;
+            let dy = this.target.y - this.y;
+            let dist = Math.sqrt(dx * dx + dy * dy);
+
+            // If close to target, hit it
+            if (dist < 20) {
+                this.hitTarget();
+                return;
+            }
+
+            // Move towards target
+            this.x += (dx / dist) * this.speed;
+            this.y += (dy / dist) * this.speed;
+        }
+
+        hitTarget() {
+            // Spin out the target
+            this.target.speed = 0;
+            this.target.spinUntil = Date.now() + 1000; // Spin for 1 second
+            this.active = false;
+        }
+
+        draw() {
+            if (!this.active) return;
+
+            ctx.save();
+            ctx.translate(this.x, this.y);
+
+            // Red shell body
+            ctx.fillStyle = "#ef4444";
+            ctx.beginPath();
+            ctx.arc(0, 0, 8, 0, Math.PI * 2);
+            ctx.fill();
+
+            // Shell pattern (white stripes)
+            ctx.strokeStyle = "#ffffff";
+            ctx.lineWidth = 2;
+            ctx.beginPath();
+            ctx.arc(0, 0, 5, 0, Math.PI * 2);
+            ctx.stroke();
+
+            // Wing-like shapes
+            ctx.fillStyle = "#dc2626";
+            ctx.beginPath();
+            ctx.moveTo(-10, 0);
+            ctx.lineTo(-6, -4);
+            ctx.lineTo(-6, 4);
+            ctx.closePath();
+            ctx.fill();
+
+            ctx.beginPath();
+            ctx.moveTo(10, 0);
+            ctx.lineTo(6, -4);
+            ctx.lineTo(6, 4);
+            ctx.closePath();
+            ctx.fill();
+
+            ctx.restore();
+        }
+    }
+
+    class Banana {
+        constructor(x, y) {
+            this.x = x;
+            this.y = y;
+            this.active = true;
+        }
+
+        draw() {
+            if (!this.active) return;
+
+            ctx.save();
+            ctx.translate(this.x, this.y);
+
+            // Banana peel
+            ctx.fillStyle = "#fde047";
+            ctx.beginPath();
+            ctx.ellipse(0, 0, 12, 8, 0, 0, Math.PI * 2);
+            ctx.fill();
+
+            // Brown spots
+            ctx.fillStyle = "#92400e";
+            ctx.beginPath();
+            ctx.arc(-4, -2, 2, 0, Math.PI * 2);
+            ctx.arc(4, 2, 2, 0, Math.PI * 2);
+            ctx.fill();
+
+            // White highlight
+            ctx.fillStyle = "rgba(255, 255, 255, 0.5)";
+            ctx.beginPath();
+            ctx.arc(-2, -1, 3, 0, Math.PI * 2);
+            ctx.fill();
+
+            ctx.restore();
+        }
+
+        checkCollision(kart) {
+            if (!this.active || kart.isPlayer) return false;
+
+            let dx = kart.x - this.x;
+            let dy = kart.y - this.y;
+            let dist = Math.sqrt(dx * dx + dy * dy);
+
+            if (dist < 20) {
+                // Hit banana - spin out
+                kart.speed = 0;
+                kart.spinUntil = Date.now() + 1500; // Spin for 1.5 seconds
+                this.active = false;
+                return true;
+            }
+            return false;
+        }
+    }
+
+    // --- Global Game Objects ---
+    let karts = [];
+    let playerKart;
+    let keys = { ArrowUp: false, ArrowDown: false, ArrowLeft: false, ArrowRight: false };
+
+    // Resize handling - full screen
+    function resize() {
+        canvas.width = window.innerWidth;
+        canvas.height = window.innerHeight;
+        updateScaledPositions();
+    }
+    window.addEventListener('resize', resize);
+    resize();
+
+    // Input Handling
+    window.addEventListener('keydown', e => keys[e.code] = true);
+    window.addEventListener('keyup', e => keys[e.code] = false);
+
+    // Touch controls
+    const btnLeft = document.getElementById('btn-left');
+    const btnRight = document.getElementById('btn-right');
+
+    const handleTouchStart = (key) => (e) => { e.preventDefault(); keys[key] = true; };
+    const handleTouchEnd = (key) => (e) => { e.preventDefault(); keys[key] = false; };
+
+    btnLeft.addEventListener('touchstart', handleTouchStart('ArrowLeft'));
+    btnLeft.addEventListener('touchend', handleTouchEnd('ArrowLeft'));
+    btnLeft.addEventListener('mousedown', handleTouchStart('ArrowLeft'));
+    btnLeft.addEventListener('mouseup', handleTouchEnd('ArrowLeft'));
+
+    btnRight.addEventListener('touchstart', handleTouchStart('ArrowRight'));
+    btnRight.addEventListener('touchend', handleTouchEnd('ArrowRight'));
+    btnRight.addEventListener('mousedown', handleTouchStart('ArrowRight'));
+    btnRight.addEventListener('mouseup', handleTouchEnd('ArrowRight'));
+
+
+    // --- Core Logic ---
+
+    function showTrackSelection() {
+        document.getElementById('start-screen').classList.add('hidden');
+        document.getElementById('track-selection').classList.remove('hidden');
+        setDifficulty(currentDifficulty);
+
+        // Generate track shape buttons
+        const shapeContainer = document.getElementById('shape-buttons');
+        shapeContainer.innerHTML = '';
+        TRACK_SHAPES.forEach(shape => {
+            const btn = document.createElement('button');
+            btn.className = 'w-full p-3 rounded-lg border-2 text-left transition hover:scale-102 hover:shadow-lg flex items-center justify-between';
+            btn.style.borderColor = '#22c55e';
+            if (shape.id === selectedTrackShape.id) {
+                btn.classList.add('active');
+                btn.style.background = 'linear-gradient(135deg, #ecfdf3 0%, #dcfce7 100%)';
+            } else {
+                btn.style.background = 'white';
+            }
+
+            btn.innerHTML = `
+                <div>
+                    <h3 class="font-bold text-lg text-green-800">${shape.name}</h3>
+                    <p class="text-sm text-gray-600">${shape.description}</p>
+                </div>
+                <span class="text-xs font-bold text-green-700">No crossovers</span>
+            `;
+            btn.onclick = () => selectTrackShape(shape);
+            shapeContainer.appendChild(btn);
+        });
+
+        // Generate track buttons
+        const container = document.getElementById('track-buttons');
+        container.innerHTML = '';
+
+        TRACKS.forEach(track => {
+            const btn = document.createElement('button');
+            btn.className = 'w-full p-4 rounded-lg border-2 text-left transition hover:scale-102 hover:shadow-lg';
+            btn.style.borderColor = track.color;
+            btn.style.background = `linear-gradient(135deg, white 0%, ${track.color}15 100%)`;
+            btn.innerHTML = `
+                <div class="flex items-center gap-3">
+                    <span class="text-3xl">${track.icon}</span>
+                    <div>
+                        <h3 class="font-bold text-lg" style="color: ${track.color}">${track.name}</h3>
+                        <p class="text-sm text-gray-600">${track.description}</p>
+                    </div>
+                </div>
+            `;
+            btn.onclick = () => selectTrack(track);
+            container.appendChild(btn);
+        });
+    }
+
+    function hideTrackSelection() {
+        document.getElementById('track-selection').classList.add('hidden');
+        document.getElementById('start-screen').classList.remove('hidden');
+    }
+
+    function selectTrackShape(shape) {
+        selectedTrackShape = shape;
+        updateScaledPositions();
+        setTimeout(resize, 0); // ensure canvas sizing stays synced
+        showTrackSelection();
+    }
+
+    function selectTrack(track) {
+        selectedTrack = track;
+        currentTrackColor = track.color;
+        document.getElementById('track-selection').classList.add('hidden');
+        startGame();
+    }
+
+    function startGame() {
+        document.getElementById('start-screen').classList.add('hidden');
+        document.getElementById('track-selection').classList.add('hidden');
+        document.getElementById('hud-pos').classList.remove('hidden');
+        document.getElementById('hud-lap').classList.remove('hidden');
+        document.getElementById('hud-score').classList.remove('hidden');
+        document.getElementById('speed-toggle').classList.remove('hidden');
+
+        // Reset track geometry, item boxes, and trees for the chosen layout
+        updateScaledPositions();
+
+        // Reset scoring
+        score = { correct: 0, total: 0 };
+        wrongAnswers = [];
+        questionsAsked = [];
+        comprehensionPassageUsed = [];
+        currentStreak = 0;
+        bestStreak = 0;
+        totalResponseTime = 0;
+        questionStartTime = 0;
+        raceStartTime = Date.now();
+        questionsThisLap = 0;
+        updateScoreDisplay();
+
+        // Show mobile controls if on mobile
+        if(window.innerWidth < 768) {
+            document.getElementById('mobile-controls').classList.remove('hidden');
+        }
+
+        // Initialize Karts with character images - scale positions to current canvas size
+        const grid = startGridPositions.length ? startGridPositions : [
+            {x: 100 * getScale().x, y: 280 * getScale().y},
+            {x: 100 * getScale().x, y: 320 * getScale().y},
+            {x: 80 * getScale().x, y: 290 * getScale().y},
+            {x: 80 * getScale().x, y: 330 * getScale().y}
+        ];
+
+        karts = [
+            new Kart(grid[0].x, grid[0].y, '#ef4444', true, 0, playerKartImg, () => playerKartImgLoaded), // Player - Mario
+            new Kart(grid[1].x, grid[1].y, '#3b82f6', false, 100, warioImg, () => warioImgLoaded), // AI 1 - Wario
+            new Kart(grid[2].x, grid[2].y, '#22c55e', false, 200, kongImg, () => kongImgLoaded), // AI 2 - Donkey Kong
+            new Kart(grid[3].x, grid[3].y, '#eab308', false, 300, bowserImg, () => bowserImgLoaded)  // AI 3 - Bowser
+        ];
+        playerKart = karts[0];
+        playerKart.angle = trackStartAngle;
+
+        // Set AI angles
+        karts.slice(1).forEach(k => k.angle = trackStartAngle);
+
+        gameState = 'racing';
+        gameLoop();
+    }
+
+    function updateScoreDisplay() {
+        document.getElementById('hud-score').innerText = `Score: ${score.correct}/${score.total} | Lap Q: ${Math.min(questionsThisLap, QUESTIONS_PER_LAP)}/${QUESTIONS_PER_LAP}`;
+    }
+
+    function setDifficulty(level) {
+        if (!SPEED_PRESETS[level]) return;
+
+        currentDifficulty = level;
+        const preset = SPEED_PRESETS[level];
+
+        // Update physics constants
+        MAX_SPEED = preset.MAX_SPEED;
+        BOOST_SPEED = preset.BOOST_SPEED;
+        OFFROAD_SPEED = preset.OFFROAD_SPEED;
+        ACCELERATION = preset.ACCELERATION;
+        TURN_SPEED = preset.TURN_SPEED;
+        RED_SHELL_SPEED = preset.RED_SHELL_SPEED;
+
+        // Retune AI speeds to match the new spice level
+        karts.filter(k => !k.isPlayer).forEach(k => {
+            k.aiSpeedMod = getAiSpeedMod();
+        });
+
+        // Update active button state using IDs (both overlays share the same classes)
+        ['speed-mild','speed-medium','speed-spicy','shape-mild','shape-medium','shape-spicy'].forEach(id => {
+            const el = document.getElementById(id);
+            if (el) el.classList.remove('active');
+        });
+        ['speed-' + level, 'shape-' + level].forEach(id => {
+            const el = document.getElementById(id);
+            if (el) el.classList.add('active');
+        });
+
+        console.log(`Race difficulty set to: ${level} (${DIFFICULTY_SETTINGS[level].description})`);
+    }
+
+    function drawTrack() {
+        const scale = getScale();
+        const avgScale = (scale.x + scale.y) / 2;
+        const trackHalfWidth = getTrackHalfWidth();
+        const barrierWidth = 10 * avgScale;
+
+        // Premium grass with gradient
+        const grassGradient = ctx.createLinearGradient(0, 0, canvas.width, canvas.height);
+        grassGradient.addColorStop(0, '#22c55e');
+        grassGradient.addColorStop(0.5, '#16a34a');
+        grassGradient.addColorStop(1, '#15803d');
+        ctx.fillStyle = grassGradient;
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+        // Add grass texture pattern
+        ctx.fillStyle = 'rgba(0, 0, 0, 0.03)';
+        for (let x = 0; x < canvas.width; x += 20) {
+            for (let y = 0; y < canvas.height; y += 20) {
+                if ((x + y) % 40 === 0) {
+                    ctx.fillRect(x, y, 10, 10);
+                }
+            }
+        }
+
+        // Premium trees with shadows and 3D effect
+        const fallbackTrees = [
+            {x:400 * scale.x, y:300 * scale.y, size: 1.2}, {x:150 * scale.x, y:150 * scale.y, size: 1}, {x:650 * scale.x, y:450 * scale.y, size: 1.1},
+            {x:50 * scale.x, y:50 * scale.y, size: 0.8}, {x:750 * scale.x, y:550 * scale.y, size: 1.3}, {x:720 * scale.x, y:120 * scale.y, size: 0.9},
+            {x:80 * scale.x, y:450 * scale.y, size: 1}, {x:420 * scale.x, y:520 * scale.y, size: 0.85}
+        ];
+        const trees = trackTrees.length ? trackTrees : fallbackTrees;
+        trees.forEach(t => {
+            const treeSize = 28 * avgScale * t.size;
+            const tx = t.x;
+            const ty = t.y;
+
+            // Tree shadow
+            ctx.fillStyle = 'rgba(0, 0, 0, 0.2)';
+            ctx.beginPath();
+            ctx.ellipse(tx + 5, ty + 8, treeSize * 0.8, treeSize * 0.4, 0, 0, Math.PI * 2);
+            ctx.fill();
+
+            // Tree trunk
+            ctx.fillStyle = '#5c4033';
+            ctx.fillRect(tx - 4 * avgScale, ty - 5 * avgScale, 8 * avgScale, 15 * avgScale);
+
+            // Outer foliage (dark)
+            const treeGradient = ctx.createRadialGradient(tx, ty - 10, 0, tx, ty - 10, treeSize);
+            treeGradient.addColorStop(0, '#166534');
+            treeGradient.addColorStop(0.7, '#14532d');
+            treeGradient.addColorStop(1, '#0f3d1f');
+            ctx.fillStyle = treeGradient;
+            ctx.beginPath();
+            ctx.arc(tx, ty - 10 * avgScale, treeSize, 0, Math.PI * 2);
+            ctx.fill();
+
+            // Inner foliage highlight
+            ctx.fillStyle = '#22c55e';
+            ctx.beginPath();
+            ctx.arc(tx - 5 * avgScale, ty - 15 * avgScale, treeSize * 0.4, 0, Math.PI * 2);
+            ctx.fill();
+        });
+
+        ctx.lineCap = 'round';
+        ctx.lineJoin = 'round';
+        const curbWidth = Math.min(barrierWidth * 1.1, trackHalfWidth * 0.35);
+
+        const asphaltOuter = offsetTrack(TRACK_POINTS, trackHalfWidth - curbWidth);
+        const asphaltInner = offsetTrack(TRACK_POINTS, -trackHalfWidth + curbWidth);
+        const outerEdgeLine = offsetTrack(TRACK_POINTS, trackHalfWidth);
+        const innerEdgeLine = offsetTrack(TRACK_POINTS, -trackHalfWidth);
+        const outerCurbOuter = offsetTrack(TRACK_POINTS, trackHalfWidth + curbWidth);
+        const outerCurbInner = offsetTrack(TRACK_POINTS, trackHalfWidth - curbWidth);
+        const innerCurbOuter = offsetTrack(TRACK_POINTS, -trackHalfWidth + curbWidth);
+        const innerCurbInner = offsetTrack(TRACK_POINTS, -trackHalfWidth - curbWidth);
+        const shadowOuter = offsetTrack(TRACK_POINTS, trackHalfWidth + curbWidth * 1.6);
+        const shadowInner = offsetTrack(TRACK_POINTS, -trackHalfWidth - curbWidth * 1.6);
+
+        const strokeLoop = (points, width, color, dash = []) => {
+            ctx.save();
+            ctx.lineWidth = width;
+            ctx.strokeStyle = color;
+            ctx.setLineDash(dash);
+            ctx.beginPath();
+            ctx.moveTo(points[0].x, points[0].y);
+            for (let i = 1; i < points.length; i++) {
+                ctx.lineTo(points[i].x, points[i].y);
+            }
+            ctx.closePath();
+            ctx.stroke();
+            ctx.restore();
+        };
+
+        // Track shadow hugging the edges
+        fillBand(shadowOuter, shadowInner, 'rgba(0, 0, 0, 0.18)');
+
+        // Outer curb band with bright striping
+        fillBand(outerCurbOuter, outerCurbInner, '#b91c1c');
+        strokeLoop(outerEdgeLine, curbWidth * 1.6, '#ffffff', [18 * avgScale, 18 * avgScale]);
+
+        // Inner curb band with matching striping
+        fillBand(innerCurbInner, innerCurbOuter, '#b91c1c');
+        strokeLoop(innerEdgeLine, curbWidth * 1.3, '#ffffff', [12 * avgScale, 12 * avgScale]);
+
+        // Main asphalt track with gradient for premium look
+        const trackGradient = ctx.createLinearGradient(0, 0, canvas.width, canvas.height);
+        trackGradient.addColorStop(0, '#374151');
+        trackGradient.addColorStop(0.3, '#4b5563');
+        trackGradient.addColorStop(0.7, '#374151');
+        trackGradient.addColorStop(1, '#1f2937');
+        fillBand(asphaltOuter, asphaltInner, trackGradient);
+
+        // Bridge decking for elevated crossover-safe layout
+        if (selectedTrackShape.id === 'canyon-bridge') {
+            const segment = selectedTrackShape.finishSegment || [2, 3];
+            const a = TRACK_POINTS[segment[0]];
+            const b = TRACK_POINTS[segment[1]];
+            const vx = b.x - a.x;
+            const vy = b.y - a.y;
+            const len = Math.hypot(vx, vy) || 1;
+            const nx = -vy / len;
+            const ny = vx / len;
+            const halfW = trackHalfWidth * 1.25;
+
+            const bridgePoints = [
+                { x: a.x + nx * halfW, y: a.y + ny * halfW },
+                { x: b.x + nx * halfW, y: b.y + ny * halfW },
+                { x: b.x - nx * halfW, y: b.y - ny * halfW },
+                { x: a.x - nx * halfW, y: a.y - ny * halfW }
+            ];
+
+            const bridgeGrad = ctx.createLinearGradient(a.x, a.y, b.x, b.y);
+            bridgeGrad.addColorStop(0, '#fcd34d');
+            bridgeGrad.addColorStop(1, '#f59e0b');
+
+            ctx.save();
+            ctx.beginPath();
+            ctx.moveTo(bridgePoints[0].x, bridgePoints[0].y);
+            bridgePoints.slice(1).forEach(p => ctx.lineTo(p.x, p.y));
+            ctx.closePath();
+            ctx.fillStyle = bridgeGrad;
+            ctx.fill();
+
+            ctx.strokeStyle = '#92400e';
+            ctx.lineWidth = 4 * avgScale;
+            ctx.stroke();
+            ctx.restore();
+        }
+
+        // Track edge lines (white racing lines)
+        strokeLoop(outerEdgeLine, 3 * avgScale, 'rgba(255, 255, 255, 0.9)');
+        strokeLoop(innerEdgeLine, 3 * avgScale, 'rgba(255, 255, 255, 0.9)');
+
+        // Start/Finish Line - crisp checkerboard band set on the long top straight
+        ctx.save();
+        ctx.translate(startFinishAnchor.x, startFinishAnchor.y);
+        ctx.rotate(startFinishAngle);
+
+        const checkSize = 10 * avgScale;
+        const bandDepth = FINISH_BAND_DEPTH * avgScale; // thickness along the driving direction
+        const lineHeight = trackHalfWidth * FINISH_LINE_HEIGHT_FACTOR; // span across the full track width
+        const cols = Math.ceil(bandDepth / checkSize) + 1;
+        const rows = Math.ceil(lineHeight / checkSize) + 1;
+        const xStart = -bandDepth / 2;
+        const yStart = -lineHeight / 2;
+
+        // Base to tidy up underlying curbs
+        ctx.fillStyle = '#2f2f2f';
+        ctx.fillRect(xStart, yStart, bandDepth, lineHeight);
+
+        // Clip to the band so checker edges stay clean
+        ctx.beginPath();
+        ctx.rect(xStart, yStart, bandDepth, lineHeight);
+        ctx.clip();
+
+        for (let i = 0; i < cols; i++) {
+            for (let j = 0; j < rows; j++) {
+                ctx.fillStyle = (i + j) % 2 === 0 ? 'white' : 'black';
+                ctx.fillRect(xStart + i * checkSize, yStart + j * checkSize, checkSize, checkSize);
+            }
+        }
+
+        // Crisp outline for definition
+        ctx.lineWidth = 2 * avgScale;
+        ctx.strokeStyle = 'white';
+        ctx.strokeRect(xStart, yStart, bandDepth, lineHeight);
+
+        ctx.restore();
+
+        // Center dashed line - scaled
+        ctx.strokeStyle = "#fff";
+        ctx.lineWidth = 2 * avgScale;
+        ctx.setLineDash([15 * avgScale, 15 * avgScale]);
+        ctx.beginPath();
+        ctx.moveTo(TRACK_POINTS[0].x, TRACK_POINTS[0].y);
+        for(let i=1; i<TRACK_POINTS.length; i++) {
+             ctx.lineTo(TRACK_POINTS[i].x, TRACK_POINTS[i].y);
+        }
+        ctx.closePath();
+        ctx.stroke();
+        ctx.setLineDash([]);
+    }
+
+    function checkOnTrack(x, y) {
+        // Simplified Logic: Distance to nearest Track Line Segment
+        // In a real robust game, we'd use a hidden canvas or strict math.
+        // Here, we iterate segments.
+        let onTrack = false;
+
+        for(let i=0; i<TRACK_POINTS.length; i++) {
+            let p1 = TRACK_POINTS[i];
+            let p2 = TRACK_POINTS[(i+1)%TRACK_POINTS.length];
+
+            // Distance from point to line segment
+            let A = x - p1.x;
+            let B = y - p1.y;
+            let C = p2.x - p1.x;
+            let D = p2.y - p1.y;
+
+            let dot = A * C + B * D;
+            let len_sq = C * C + D * D;
+            let param = -1;
+            if (len_sq != 0) // in case of 0 length line
+                param = dot / len_sq;
+
+            let xx, yy;
+
+            if (param < 0) {
+                xx = p1.x;
+                yy = p1.y;
+            }
+            else if (param > 1) {
+                xx = p2.x;
+                yy = p2.y;
+            }
+            else {
+                xx = p1.x + param * C;
+                yy = p1.y + param * D;
+            }
+
+            let dx = x - xx;
+            let dy = y - yy;
+            let distance = Math.sqrt(dx * dx + dy * dy);
+
+            if(distance < 50) { // 50 is half track width
+                onTrack = true;
+                break;
+            }
+        }
+        return onTrack;
+    }
+
+    // Get nearest point on track and distance info for barrier collision
+    function getTrackInfo(x, y) {
+        const scale = getScale();
+        const avgScale = (scale.x + scale.y) / 2;
+        const trackHalfWidth = 50 * avgScale;
+
+        let minDist = Infinity;
+        let nearestX = x;
+        let nearestY = y;
+
+        for(let i=0; i<TRACK_POINTS.length; i++) {
+            let p1 = TRACK_POINTS[i];
+            let p2 = TRACK_POINTS[(i+1)%TRACK_POINTS.length];
+
+            let A = x - p1.x;
+            let B = y - p1.y;
+            let C = p2.x - p1.x;
+            let D = p2.y - p1.y;
+
+            let dot = A * C + B * D;
+            let len_sq = C * C + D * D;
+            let param = -1;
+            if (len_sq != 0)
+                param = dot / len_sq;
+
+            let xx, yy;
+
+            if (param < 0) {
+                xx = p1.x;
+                yy = p1.y;
+            }
+            else if (param > 1) {
+                xx = p2.x;
+                yy = p2.y;
+            }
+            else {
+                xx = p1.x + param * C;
+                yy = p1.y + param * D;
+            }
+
+            let dx = x - xx;
+            let dy = y - yy;
+            let distance = Math.sqrt(dx * dx + dy * dy);
+
+            if(distance < minDist) {
+                minDist = distance;
+                nearestX = xx;
+                nearestY = yy;
+            }
+        }
+
+        return {
+            distance: minDist,
+            nearestX: nearestX,
+            nearestY: nearestY,
+            trackHalfWidth: trackHalfWidth
+        };
+    }
+
+    // Push kart back onto track if it goes past the barrier
+    function enforceTrackBarrier(kart) {
+        const info = getTrackInfo(kart.x, kart.y);
+        const barrierLimit = info.trackHalfWidth + 5; // Small margin past track edge
+
+        if (info.distance > barrierLimit) {
+            // Calculate direction from nearest track point to kart
+            let dx = kart.x - info.nearestX;
+            let dy = kart.y - info.nearestY;
+            let dist = Math.sqrt(dx * dx + dy * dy);
+
+            if (dist > 0) {
+                // Normalize and push kart back to the barrier edge
+                let nx = dx / dist;
+                let ny = dy / dist;
+
+                kart.x = info.nearestX + nx * barrierLimit;
+                kart.y = info.nearestY + ny * barrierLimit;
+
+                // Reduce speed on barrier hit (bounce effect)
+                kart.speed *= 0.5;
+            }
+        }
+    }
+
+    function drawItemBoxes() {
+        const scale = getScale();
+        const avgScale = (scale.x + scale.y) / 2;
+        const boxSize = 18 * avgScale;
+        const time = Date.now();
+
+        // Draw question boxes (premium gold with 3D effect)
+        ITEM_BOXES.forEach(box => {
+            if (!box.active) return;
+
+            // Floating animation
+            const floatY = Math.sin(time / 300 + box.x) * 3;
+
+            // Shadow
+            ctx.fillStyle = 'rgba(0, 0, 0, 0.3)';
+            ctx.beginPath();
+            ctx.ellipse(box.x, box.y + boxSize + 5, boxSize * 0.7, boxSize * 0.3, 0, 0, Math.PI * 2);
+            ctx.fill();
+
+            // 3D box effect - sides
+            ctx.fillStyle = '#b8860b'; // Dark gold
+            ctx.fillRect(box.x - boxSize + 3, box.y - boxSize + floatY + 3, boxSize * 2, boxSize * 2);
+
+            // Main box face with gradient
+            const goldGradient = ctx.createLinearGradient(box.x - boxSize, box.y - boxSize, box.x + boxSize, box.y + boxSize);
+            goldGradient.addColorStop(0, '#ffd700');
+            goldGradient.addColorStop(0.3, '#ffec8b');
+            goldGradient.addColorStop(0.5, '#ffd700');
+            goldGradient.addColorStop(1, '#daa520');
+            ctx.fillStyle = goldGradient;
+            ctx.fillRect(box.x - boxSize, box.y - boxSize + floatY, boxSize * 2, boxSize * 2);
+
+            // Shine effect
+            ctx.fillStyle = 'rgba(255, 255, 255, 0.4)';
+            ctx.beginPath();
+            ctx.moveTo(box.x - boxSize, box.y - boxSize + floatY);
+            ctx.lineTo(box.x + boxSize, box.y - boxSize + floatY);
+            ctx.lineTo(box.x - boxSize, box.y + floatY);
+            ctx.closePath();
+            ctx.fill();
+
+            // Question Mark with shadow
+            ctx.fillStyle = 'rgba(0, 0, 0, 0.3)';
+            ctx.font = `bold ${boxSize * 1.5}px Fredoka`;
+            ctx.textAlign = 'center';
+            ctx.fillText("?", box.x + 2, box.y + boxSize * 0.5 + floatY + 2);
+
+            ctx.fillStyle = "#fff";
+            ctx.fillText("?", box.x, box.y + boxSize * 0.5 + floatY);
+
+            // Glow effect
+            const glowIntensity = (Math.sin(time / 200) + 1) / 2;
+            ctx.shadowColor = '#ffd700';
+            ctx.shadowBlur = 15 * glowIntensity;
+            ctx.strokeStyle = `rgba(255, 215, 0, ${0.5 + glowIntensity * 0.5})`;
+            ctx.lineWidth = 3;
+            ctx.strokeRect(box.x - boxSize, box.y - boxSize + floatY, boxSize * 2, boxSize * 2);
+            ctx.shadowBlur = 0;
+        });
+
+        // Draw power-up boxes (premium rainbow with 3D effect)
+        POWERUP_BOXES.forEach(box => {
+            if (!box.active) return;
+
+            const floatY = Math.sin(time / 250 + box.x) * 4;
+            const hue = (time / 10 + box.x) % 360;
+
+            // Shadow
+            ctx.fillStyle = 'rgba(0, 0, 0, 0.3)';
+            ctx.beginPath();
+            ctx.ellipse(box.x, box.y + boxSize + 5, boxSize * 0.7, boxSize * 0.3, 0, 0, Math.PI * 2);
+            ctx.fill();
+
+            // 3D box sides
+            ctx.fillStyle = `hsl(${hue + 30}, 70%, 35%)`;
+            ctx.fillRect(box.x - boxSize + 3, box.y - boxSize + floatY + 3, boxSize * 2, boxSize * 2);
+
+            // Rainbow gradient box
+            const rainbowGradient = ctx.createLinearGradient(box.x - boxSize, box.y - boxSize, box.x + boxSize, box.y + boxSize);
+            rainbowGradient.addColorStop(0, `hsl(${hue}, 80%, 60%)`);
+            rainbowGradient.addColorStop(0.25, `hsl(${(hue + 60) % 360}, 80%, 60%)`);
+            rainbowGradient.addColorStop(0.5, `hsl(${(hue + 120) % 360}, 80%, 60%)`);
+            rainbowGradient.addColorStop(0.75, `hsl(${(hue + 180) % 360}, 80%, 60%)`);
+            rainbowGradient.addColorStop(1, `hsl(${(hue + 240) % 360}, 80%, 60%)`);
+            ctx.fillStyle = rainbowGradient;
+            ctx.fillRect(box.x - boxSize, box.y - boxSize + floatY, boxSize * 2, boxSize * 2);
+
+            // Shine
+            ctx.fillStyle = 'rgba(255, 255, 255, 0.3)';
+            ctx.beginPath();
+            ctx.moveTo(box.x - boxSize, box.y - boxSize + floatY);
+            ctx.lineTo(box.x + boxSize, box.y - boxSize + floatY);
+            ctx.lineTo(box.x - boxSize, box.y + floatY);
+            ctx.closePath();
+            ctx.fill();
+
+            // Star with shadow
+            ctx.font = `bold ${boxSize * 1.6}px Arial`;
+            ctx.textAlign = 'center';
+            ctx.fillStyle = 'rgba(0, 0, 0, 0.3)';
+            ctx.fillText("★", box.x + 2, box.y + boxSize * 0.5 + floatY + 2);
+            ctx.fillStyle = "#fff";
+            ctx.fillText("★", box.x, box.y + boxSize * 0.5 + floatY);
+
+            // Rainbow glow
+            ctx.shadowColor = `hsl(${hue}, 100%, 50%)`;
+            ctx.shadowBlur = 20;
+            ctx.strokeStyle = 'rgba(255, 255, 255, 0.8)';
+            ctx.lineWidth = 2;
+            ctx.strokeRect(box.x - boxSize, box.y - boxSize + floatY, boxSize * 2, boxSize * 2);
+            ctx.shadowBlur = 0;
+        });
+
+        // Draw bananas
+        bananas.forEach(banana => banana.draw());
+    }
+
+    function isInFinishBand(kart) {
+        const scale = getScale();
+        const avgScale = (scale.x + scale.y) / 2;
+        const trackHalfWidth = getTrackHalfWidth();
+        const bandDepth = FINISH_BAND_DEPTH * avgScale;
+        const lineHeight = trackHalfWidth * FINISH_LINE_HEIGHT_FACTOR;
+
+        const dx = kart.x - startFinishAnchor.x;
+        const dy = kart.y - startFinishAnchor.y;
+        const cosA = Math.cos(-startFinishAngle);
+        const sinA = Math.sin(-startFinishAngle);
+
+        // Rotate into band space (x = travel direction, y = across track)
+        const localX = dx * cosA - dy * sinA;
+        const localY = dx * sinA + dy * cosA;
+
+        const withinAlongTrack = Math.abs(localX) <= bandDepth * 0.7; // generous depth to avoid missed laps
+        const withinAcrossTrack = Math.abs(localY) <= lineHeight / 2;
+
+        return withinAlongTrack && withinAcrossTrack;
+    }
+
+    function checkLapLogic() {
+        // Determine player progress.
+        // Simplified: Check distance to midpoint and crossing through finish band on the top straight
+        let p = playerKart;
+        let midNode = TRACK_POINTS[4];
+        let midDist = Math.sqrt((p.x - midNode.x)**2 + (p.y - midNode.y)**2);
+        const midThreshold = getTrackHalfWidth() * 2;
+
+        if(midDist < midThreshold) {
+            p.passedMidpoint = true;
+        }
+
+        const onFinishBand = isInFinishBand(p);
+
+        if(onFinishBand) {
+            if (!p.inFinishZone && p.passedMidpoint) {
+                if (questionsThisLap < QUESTIONS_PER_LAP) {
+                    const remaining = QUESTIONS_PER_LAP - questionsThisLap;
+                    showFloatingText(`Answer ${remaining} more question${remaining === 1 ? '' : 's'}!`, p.x, p.y, '#facc15');
+                } else {
+                    p.lap++;
+                    p.passedMidpoint = false;
+                    questionsThisLap = 0;
+
+                    // Respawn item boxes on new lap
+                    ITEM_BOXES.forEach(b => b.active = true);
+
+                    // Enable power-up boxes from lap 2+
+                    if(p.lap >= 2) {
+                        POWERUP_BOXES.forEach(b => b.active = true);
+                    }
+
+                    // Update difficulty based on lap
+                    if(p.lap === 2) {
+                        currentDifficulty = 'medium';
+                    } else if(p.lap === 3) {
+                        currentDifficulty = 'hard';
+                    }
+
+                    document.getElementById('hud-lap').innerText = `Lap: ${p.lap}/${lapsTotal}`;
+                    updateScoreDisplay();
+
+                    if(p.lap > lapsTotal) {
+                        finishGame();
+                    }
+                }
+            }
+            p.inFinishZone = true;
+        } else {
+            p.inFinishZone = false;
+        }
+    }
+
+    function updatePhysics() {
+        if(gameState !== 'racing') return;
+
+        // Check if freeze timer has expired
+        if (opponentsFrozen && Date.now() >= freezeEndTime) {
+            opponentsFrozen = false;
+        }
+
+        // Check if slow timer has expired
+        if (opponentsSlowed && Date.now() >= slowEndTime) {
+            opponentsSlowed = false;
+        }
+
+        // Update red shells
+        redShells.forEach(shell => shell.update());
+        redShells = redShells.filter(shell => shell.active);
+
+        const shieldActive = Date.now() < playerShieldUntil;
+
+        // Clear any ghost curse if the shield is active
+        if (shieldActive && playerKart.ghostCurse) {
+            playerKart.ghostCurse = 0;
+        }
+
+        // Check if ghost curse is active
+        let isGhostCursed = playerKart.ghostCurse && Date.now() < playerKart.ghostCurse;
+
+        // Check if turbo dash is active
+        const boostActive = Date.now() < playerBoostUntil;
+
+        // Player Controls (disabled during ghost curse)
+        if (!isGhostCursed) {
+            if (keys['ArrowLeft']) playerKart.angle -= TURN_SPEED;
+            if (keys['ArrowRight']) playerKart.angle += TURN_SPEED;
+        } else {
+            // Ghost curse: can't move
+            playerKart.speed = 0;
+        }
+
+        // Auto accelerate (Mario Kart style) - always moving forward
+        let targetSpeed = boostActive ? BOOST_SPEED : MAX_SPEED;
+
+        // Check Terrain - tuning based on difficulty forgiveness
+        if(!checkOnTrack(playerKart.x, playerKart.y)) {
+            const forgiveness = (DIFFICULTY_SETTINGS[currentDifficulty]?.offroadForgiveness) || 1;
+            targetSpeed = OFFROAD_SPEED * forgiveness;
+        }
+
+        // Apply Speed
+        if(playerKart.speed < targetSpeed) playerKart.speed += ACCELERATION;
+        if(playerKart.speed > targetSpeed) playerKart.speed -= ACCELERATION * 2; // Slow down fast offroad
+
+        // Question Box Collision
+        ITEM_BOXES.forEach(box => {
+            if(box.active) {
+                let dx = playerKart.x - box.x;
+                let dy = playerKart.y - box.y;
+                if(Math.sqrt(dx*dx + dy*dy) < 25) {
+                    box.active = false;
+                    triggerQuiz();
+                }
+            }
+        });
+
+        // Power-up Box Collision
+        POWERUP_BOXES.forEach(box => {
+            if(box.active) {
+                let dx = playerKart.x - box.x;
+                let dy = playerKart.y - box.y;
+                if(Math.sqrt(dx*dx + dy*dy) < 25) {
+                    box.active = false;
+                    triggerSlotMachine();
+                }
+            }
+        });
+
+        // Banana collision detection for opponents
+        bananas.forEach(banana => {
+            karts.filter(k => !k.isPlayer).forEach(kart => {
+                banana.checkCollision(kart);
+            });
+        });
+        // Remove inactive bananas
+        bananas = bananas.filter(b => b.active);
+
+        // Update all karts
+        karts.forEach(k => k.update());
+
+        // Enforce track barriers for all karts
+        karts.forEach(k => enforceTrackBarrier(k));
+
+        checkLapLogic();
+
+        // Calculate Position
+        // Simply sort by Lap, then checkpointIndex, then distance to next waypoint
+        let sortedKarts = [...karts].sort((a,b) => {
+            if(a.lap !== b.lap) return b.lap - a.lap;
+            return b.checkpointIndex - a.checkpointIndex;
+        });
+        let pos = sortedKarts.indexOf(playerKart) + 1;
+        document.getElementById('hud-pos').innerText = `Pos: ${pos}/4`;
+    }
+
+    function gameLoop() {
+        if (gameState === 'finished') return;
+
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+        // Camera follow player? 
+        // For simple bird's eye, static camera is easier if track fits.
+        // Our track fits 800x600.
+        
+        drawTrack();
+        drawItemBoxes();
+
+        // Draw red shells
+        redShells.forEach(shell => shell.draw());
+
+        // Draw karts (Player last so on top)
+        karts.filter(k => !k.isPlayer).forEach(k => k.draw());
+        playerKart.draw();
+
+        updatePhysics();
+
+        if (gameState === 'racing') {
+            frameId = requestAnimationFrame(gameLoop);
+        }
+    }
+
+    // --- Quiz Logic ---
+
+    function triggerQuiz() {
+        gameState = 'quiz';
+        const modal = document.getElementById('quiz-modal');
+        const container = document.getElementById('options-container');
+        const qText = document.getElementById('question-text');
+        const passageContainer = document.getElementById('passage-container');
+        const passageText = document.getElementById('passage-text');
+        const difficultyBadge = document.getElementById('difficulty-badge');
+
+        let qObj;
+        let questionKey;
+        let currentPassage = null;
+
+        // Check if this is a comprehension track or regular track
+        const isComprehensionTrack = selectedTrack && selectedTrack.isComprehension;
+
+        if (isComprehensionTrack) {
+            // Comprehension track - always show passages
+            let availablePassages = COMPREHENSION_DATA.filter((p, idx) => !comprehensionPassageUsed.includes(idx));
+
+            if(availablePassages.length === 0) {
+                comprehensionPassageUsed = [];
+                availablePassages = COMPREHENSION_DATA;
+            }
+
+            const passageObj = availablePassages[Math.floor(Math.random() * availablePassages.length)];
+            const passageIdx = COMPREHENSION_DATA.indexOf(passageObj);
+            comprehensionPassageUsed.push(passageIdx);
+
+            qObj = passageObj.questions[Math.floor(Math.random() * passageObj.questions.length)];
+            currentPassage = passageObj.passage;
+
+            passageContainer.classList.remove('hidden');
+            passageText.innerText = passageObj.passage;
+
+            difficultyBadge.innerText = 'Comprehension';
+            difficultyBadge.className = 'inline-block px-3 py-1 rounded-full text-xs font-bold mb-3 bg-purple-200 text-purple-800';
+
+        } else if (selectedTrack) {
+            // Track-specific questions
+            passageContainer.classList.add('hidden');
+
+            let pool = selectedTrack.questions[currentDifficulty] || [];
+
+            // Filter out already asked questions
+            let availableQuestions = pool.filter((q, idx) => {
+                questionKey = `${selectedTrack.id}-${currentDifficulty}-${idx}`;
+                return !questionsAsked.includes(questionKey);
+            });
+
+            // Reset if all questions asked
+            if(availableQuestions.length === 0) {
+                questionsAsked = questionsAsked.filter(q => !q.startsWith(`${selectedTrack.id}-${currentDifficulty}`));
+                availableQuestions = pool;
+            }
+
+            // Pick random question
+            const randomIdx = Math.floor(Math.random() * availableQuestions.length);
+            qObj = availableQuestions[randomIdx];
+
+            // Track this question
+            const actualIdx = pool.indexOf(qObj);
+            questionKey = `${selectedTrack.id}-${currentDifficulty}-${actualIdx}`;
+            questionsAsked.push(questionKey);
+
+            // Update difficulty badge with track color
+            let badgeColor = currentDifficulty === 'easy' ? 'bg-green-200 text-green-800' :
+                           currentDifficulty === 'medium' ? 'bg-yellow-200 text-yellow-800' :
+                           'bg-red-200 text-red-800';
+            difficultyBadge.innerText = `${selectedTrack.icon} ${currentDifficulty.charAt(0).toUpperCase() + currentDifficulty.slice(1)}`;
+            difficultyBadge.className = `inline-block px-3 py-1 rounded-full text-xs font-bold mb-3 ${badgeColor}`;
+        }
+
+        // Store current question for wrong answer tracking
+        currentQuestion = {
+            question: qObj.q,
+            options: qObj.options,
+            correctAnswer: qObj.options[qObj.a],
+            correctIndex: qObj.a,
+            explanation: qObj.explanation || "Keep practicing! You'll get it next time.",
+            passage: currentPassage
+        };
+
+        // Display question
+        questionStartTime = Date.now();
+        qText.innerText = qObj.q;
+        container.innerHTML = '';
+
+        if (qObj.type === 'drag') {
+            let dragSelectedOption = null;
+
+            const hint = document.createElement('p');
+            hint.className = 'text-sm text-gray-600 mb-2 text-center';
+            hint.innerText = 'Drag a word into the box, then submit your answer.';
+            container.appendChild(hint);
+
+            const dropZone = document.createElement('div');
+            dropZone.className = 'mb-3 p-4 border-2 border-dashed border-purple-300 rounded-lg bg-purple-50 text-center font-bold text-purple-800';
+            dropZone.innerText = 'Drop word here';
+            dropZone.ondragover = (e) => { e.preventDefault(); dropZone.classList.add('bg-purple-100'); };
+            dropZone.ondragleave = () => dropZone.classList.remove('bg-purple-100');
+            dropZone.ondrop = (e) => {
+                e.preventDefault();
+                const word = e.dataTransfer.getData('text/plain');
+                if (word) {
+                    dragSelectedOption = word;
+                    dropZone.innerText = `Selected: ${word}`;
+                    dropZone.classList.remove('bg-purple-100');
+                    submitBtn.disabled = false;
+                }
+            };
+            container.appendChild(dropZone);
+
+            const chips = document.createElement('div');
+            chips.className = 'flex flex-wrap gap-2 justify-center';
+
+            qObj.options.forEach((opt, idx) => {
+                const chip = document.createElement('button');
+                chip.className = 'px-4 py-2 rounded-full bg-white border border-purple-200 shadow-sm hover:bg-purple-100 text-sm font-semibold';
+                chip.innerText = opt;
+                chip.draggable = true;
+                chip.ondragstart = (e) => {
+                    e.dataTransfer.setData('text/plain', opt);
+                };
+                chip.onclick = () => {
+                    dragSelectedOption = opt;
+                    dropZone.innerText = `Selected: ${opt}`;
+                    submitBtn.disabled = false;
+                };
+                chips.appendChild(chip);
+            });
+            container.appendChild(chips);
+
+            const submitBtn = document.createElement('button');
+            submitBtn.className = 'mt-4 w-full bg-purple-600 text-white font-bold py-3 px-4 rounded-lg hover:bg-purple-500 shadow-lg disabled:opacity-50';
+            submitBtn.innerText = 'Submit Answer';
+            submitBtn.disabled = true;
+            submitBtn.onclick = () => handleAnswer(dragSelectedOption === qObj.answer, dragSelectedOption || '');
+            container.appendChild(submitBtn);
+        } else {
+            qObj.options.forEach((opt, idx) => {
+                const btn = document.createElement('button');
+                btn.className = 'answer-btn';
+                btn.innerText = opt;
+                btn.onclick = () => handleAnswer(idx === qObj.a, opt);
+                container.appendChild(btn);
+            });
+        }
+
+        modal.classList.remove('hidden');
+    }
+
+    function handleAnswer(isCorrect, selectedAnswer) {
+        const modal = document.getElementById('quiz-modal');
+        modal.classList.add('hidden');
+
+        // Capture response timing for stat cards
+        if (questionStartTime) {
+            totalResponseTime += Date.now() - questionStartTime;
+            questionStartTime = 0;
+        }
+
+        // Update score
+        score.total++;
+        if (isCorrect) {
+            score.correct++;
+            currentStreak++;
+            bestStreak = Math.max(bestStreak, currentStreak);
+        } else {
+            currentStreak = 0;
+            // Store wrong answer for review
+            wrongAnswers.push({
+                question: currentQuestion.question,
+                yourAnswer: selectedAnswer,
+                correctAnswer: currentQuestion.correctAnswer,
+                options: currentQuestion.options,
+                correctIndex: currentQuestion.correctIndex,
+                explanation: currentQuestion.explanation,
+                passage: currentQuestion.passage,
+                corrected: false
+            });
+        }
+        updateScoreDisplay();
+
+        gameState = 'racing';
+
+        questionsThisLap++;
+        if (isCorrect) {
+            // Reward system based on lap
+            if (playerKart.lap === 1) {
+                opponentsSlowed = true;
+                slowEndTime = Date.now() + 1500;
+                showFloatingText("Nice! Opponents Slowed!", playerKart.x, playerKart.y, "#22c55e");
+            } else {
+                opponentsFrozen = true;
+                freezeEndTime = Date.now() + 1000;
+                showFloatingText("Good Job! Freeze!", playerKart.x, playerKart.y, "#22c55e");
+            }
+        } else {
+            playerKart.speed = 0;
+            playerKart.angle += Math.PI * 2;
+            showFloatingText("Spin Out!", playerKart.x, playerKart.y, "#ef4444");
+        }
+
+        // Resume loop
+        gameLoop();
+    }
+
+    function showFloatingText(text, x, y, color) {
+        // Simple canvas text injection next frame
+        // For simplicity, we just assume the loop picks it up,
+        // but creating a temp object is better.
+        // Let's just update a global 'effect' variable if we had one.
+        // Since we don't, we'll skip the visual effect for code brevity
+        // and rely on the speed change which is immediately noticeable.
+    }
+
+    // --- Slot Machine Power-Up System ---
+
+    const POWERUPS = [
+        { icon: '⚡', name: 'Lightning Strike', color: '#fbbf24', type: 'lightning' },
+        { icon: '🐢', name: 'Red Shells', color: '#ef4444', type: 'redshell' },
+        { icon: '🍌', name: 'Banana Peel', color: '#fde047', type: 'banana' },
+        { icon: '👻', name: 'Ghost Curse!', color: '#a78bfa', type: 'ghost' },
+        { icon: '❄️', name: 'Mega Freeze', color: '#60a5fa', type: 'megafreeze' },
+        { icon: '🏎️', name: 'Turbo Dash', color: '#22c55e', type: 'boost' },
+        { icon: '🛡️', name: 'Bubble Shield', color: '#14b8a6', type: 'shield' },
+        { icon: '🧹', name: 'Track Sweeper', color: '#f472b6', type: 'sweeper' }
+    ];
+
+    function triggerSlotMachine() {
+        gameState = 'slot';
+        slotMachineActive = true;
+
+        const modal = document.getElementById('slot-machine');
+        const display = document.getElementById('slot-display');
+        const nameDisplay = document.getElementById('slot-name');
+
+        modal.classList.remove('hidden');
+
+        // Spinning animation
+        let spinCount = 0;
+        const maxSpins = 20; // 20 spins over 2 seconds
+        const spinInterval = 100; // 100ms per spin
+
+        const spinTimer = setInterval(() => {
+            // Pick random power-up to display
+            const randomPowerup = POWERUPS[Math.floor(Math.random() * POWERUPS.length)];
+            display.textContent = randomPowerup.icon;
+            nameDisplay.textContent = randomPowerup.name;
+
+            spinCount++;
+
+            if (spinCount >= maxSpins) {
+                clearInterval(spinTimer);
+                // Choose final power-up
+                const finalPowerup = POWERUPS[Math.floor(Math.random() * POWERUPS.length)];
+                display.textContent = finalPowerup.icon;
+                nameDisplay.textContent = finalPowerup.name;
+                slotMachineResult = finalPowerup;
+
+                // Wait a moment then activate power-up
+                setTimeout(() => {
+                    modal.classList.add('hidden');
+                    activatePowerUp(finalPowerup.type);
+                    slotMachineActive = false;
+                    gameState = 'racing';
+                    gameLoop();
+                }, 1000);
+            }
+        }, spinInterval);
+    }
+
+    function activatePowerUp(type) {
+        const opponentKarts = karts.filter(k => !k.isPlayer);
+        const shieldActive = Date.now() < playerShieldUntil;
+
+        switch(type) {
+            case 'lightning':
+                // Slow all opponents for 2 seconds
+                opponentsSlowed = true;
+                slowEndTime = Date.now() + 2000;
+                showFloatingText("Lightning Strike! ⚡", playerKart.x, playerKart.y, "#fbbf24");
+                break;
+
+            case 'redshell':
+                // Fire 3 red shells
+                for (let i = 0; i < Math.min(3, opponentKarts.length); i++) {
+                    const shell = new RedShell(playerKart.x, playerKart.y, opponentKarts[i]);
+                    redShells.push(shell);
+                }
+                showFloatingText("Red Shells! 🐢", playerKart.x, playerKart.y, "#ef4444");
+                break;
+
+            case 'banana':
+                // Drop 3 bananas behind the player
+                for (let i = 1; i <= 3; i++) {
+                    const offsetX = Math.cos(playerKart.angle + Math.PI) * (20 * i);
+                    const offsetY = Math.sin(playerKart.angle + Math.PI) * (20 * i);
+                    const banana = new Banana(playerKart.x + offsetX, playerKart.y + offsetY);
+                    bananas.push(banana);
+                }
+                showFloatingText("Banana Peels! 🍌", playerKart.x, playerKart.y, "#fde047");
+                break;
+
+            case 'ghost':
+                // Curse! Player stops for 2 seconds unless shielded
+                if (shieldActive) {
+                    showFloatingText("Shield Blocked the Ghost! 🛡️", playerKart.x, playerKart.y, "#14b8a6");
+                } else {
+                    playerKart.speed = 0;
+                    playerKart.ghostCurse = Date.now() + 2000;
+                    showFloatingText("Ghost Curse! 👻", playerKart.x, playerKart.y, "#a78bfa");
+                }
+                break;
+
+            case 'megafreeze':
+                // Freeze all opponents for longer
+                opponentsFrozen = true;
+                freezeEndTime = Date.now() + 2500;
+                showFloatingText("Mega Freeze! ❄️", playerKart.x, playerKart.y, "#60a5fa");
+                break;
+
+            case 'boost':
+                // Short turbo dash for the player
+                playerBoostUntil = Date.now() + 3000;
+                playerKart.speed = Math.max(playerKart.speed, BOOST_SPEED);
+                showFloatingText("Turbo Dash! 🏎️", playerKart.x, playerKart.y, "#22c55e");
+                break;
+
+            case 'shield':
+                // Protective bubble that blocks the next curse or spin
+                playerShieldUntil = Date.now() + 5000;
+                playerKart.ghostCurse = 0; // clear any existing ghost effect
+                showFloatingText("Bubble Shield! 🛡️", playerKart.x, playerKart.y, "#14b8a6");
+                break;
+
+            case 'sweeper':
+                // Clear hazards and refresh boxes for the lap
+                bananas.forEach(b => b.active = false);
+                bananas = [];
+                POWERUP_BOXES.forEach(box => box.active = true);
+                showFloatingText("Track Sweeper! 🧹", playerKart.x, playerKart.y, "#f472b6");
+                break;
+        }
+    }
+
+    function finishGame() {
+        gameState = 'finished';
+        document.getElementById('game-over').classList.remove('hidden');
+
+        let sortedKarts = [...karts].sort((a,b) => {
+            if(a.lap !== b.lap) return b.lap - a.lap;
+            return b.checkpointIndex - a.checkpointIndex;
+        });
+        let pos = sortedKarts.indexOf(playerKart) + 1;
+
+        let suffix = pos === 1 ? 'st' : pos === 2 ? 'nd' : pos === 3 ? 'rd' : 'th';
+        document.getElementById('final-place').innerText = `You finished ${pos}${suffix}!`;
+
+        // Show final score
+        document.getElementById('final-score').innerText = `${score.correct}/${score.total}`;
+        const percentage = score.total > 0 ? Math.round((score.correct / score.total) * 100) : 0;
+        document.getElementById('score-percentage').innerText = `${percentage}% correct`;
+
+        const awardBanner = document.getElementById('award-banner');
+        const awardLabel = document.getElementById('award-label');
+        const awardCriteria = document.getElementById('award-criteria');
+        const fullLapQuestionGoal = lapsTotal * QUESTIONS_PER_LAP;
+
+        let awardName = 'Warm-Up Ribbon';
+        let awardMessage = `Answer at least ${QUESTIONS_PER_LAP} questions each lap to unlock the big trophies.`;
+
+        if (score.total >= fullLapQuestionGoal && percentage >= 90) {
+            awardName = 'Grand Champion Cup';
+            awardMessage = "Earned for answering every lap's questions with 90%+ accuracy—stellar stamina and skill!";
+        } else if (score.total >= fullLapQuestionGoal && percentage >= 75) {
+            awardName = 'Consistency Cup';
+            awardMessage = "Awarded for keeping strong accuracy while tackling every lap's questions.";
+        } else if (score.total >= QUESTIONS_PER_LAP && percentage >= 60) {
+            awardName = 'Determined Driver Medal';
+            awardMessage = `Great effort! Try answering all ${fullLapQuestionGoal} boxes next race to level up the award.`;
+        }
+
+        awardLabel.innerText = awardName;
+        awardCriteria.innerText = awardMessage;
+        awardBanner.classList.remove('hidden');
+
+        // Populate stat cards
+        const avgResponse = score.total > 0 ? (totalResponseTime / score.total) / 1000 : 0;
+        const totalRaceSeconds = raceStartTime ? Math.round((Date.now() - raceStartTime) / 1000) : 0;
+
+        document.getElementById('stat-accuracy').innerText = `${percentage}%`;
+        document.getElementById('stat-streak').innerText = `${bestStreak} in a row`;
+        document.getElementById('stat-time').innerText = `${avgResponse.toFixed(1)}s`;
+        document.getElementById('stat-race-time').innerText = `${totalRaceSeconds}s`;
+
+        const accuracyBar = document.getElementById('accuracy-bar');
+        accuracyBar.style.width = `${Math.min(100, percentage)}%`;
+        accuracyBar.className = `h-2 rounded-full ${percentage >= 80 ? 'bg-green-500' : percentage >= 50 ? 'bg-yellow-400' : 'bg-red-400'}`;
+
+        // Color the score based on performance
+        const scoreEl = document.getElementById('final-score');
+        if (percentage >= 80) {
+            scoreEl.className = 'text-green-600';
+        } else if (percentage >= 50) {
+            scoreEl.className = 'text-yellow-600';
+        } else {
+            scoreEl.className = 'text-red-600';
+        }
+
+        // Share a tailored encouragement message
+        const encouragementEl = document.getElementById('encouragement-text');
+        let encouragementMsg = '';
+        if (score.total === 0) {
+            encouragementMsg = "You zoomed through the track! Answer the question boxes next race to collect points.";
+        } else if (percentage === 100) {
+            encouragementMsg = "Perfect score! You nailed every question—champion work!";
+        } else if (percentage >= 80) {
+            encouragementMsg = "Awesome effort! A few more practice laps and you'll have every answer locked in.";
+        } else if (percentage >= 50) {
+            encouragementMsg = "Great racing! Keep practicing the tricky ones to boost your score even higher.";
+        } else {
+            encouragementMsg = "Way to finish the race! Let's review those tough questions together and try again.";
+        }
+        if (wrongAnswers.length > 0) {
+            encouragementMsg += " Tap \"Review Mistakes\" to fix any answers now.";
+        }
+        encouragementEl.innerText = encouragementMsg;
+
+        // Badge + growth tips to keep players motivated
+        const badgeEl = document.getElementById('performance-badge');
+        if (percentage === 100) {
+            badgeEl.innerText = 'Flawless Driver';
+            badgeEl.className = 'px-3 py-1 text-xs font-bold rounded-full bg-emerald-100 text-emerald-800';
+        } else if (percentage >= 80) {
+            badgeEl.innerText = 'Speed Scholar';
+            badgeEl.className = 'px-3 py-1 text-xs font-bold rounded-full bg-green-100 text-green-800';
+        } else if (percentage >= 50) {
+            badgeEl.innerText = 'Resilient Racer';
+            badgeEl.className = 'px-3 py-1 text-xs font-bold rounded-full bg-yellow-100 text-yellow-800';
+        } else {
+            badgeEl.innerText = 'Never Give Up';
+            badgeEl.className = 'px-3 py-1 text-xs font-bold rounded-full bg-red-100 text-red-800';
+        }
+
+        const tips = [];
+        if (percentage < 80) {
+            tips.push('Aim for 80%+ accuracy to unlock the Speed Scholar badge next race.');
+        }
+        if (bestStreak < 3 && score.total > 0) {
+            tips.push('Build a 3-question streak by slowing down and double-checking choices.');
+        }
+        if (avgResponse > 6) {
+            tips.push('Try to answer in under 6s—read the story once, then pick your best answer.');
+        }
+        if (wrongAnswers.length > 0) {
+            tips.push('Use Review Mistakes to replay tricky questions with hints.');
+        }
+
+        const growthContainer = document.getElementById('growth-tips');
+        const growthList = document.getElementById('growth-list');
+        if (tips.length > 0) {
+            growthList.innerHTML = '';
+            tips.forEach(tip => {
+                const li = document.createElement('li');
+                li.innerText = tip;
+                growthList.appendChild(li);
+            });
+            growthContainer.classList.remove('hidden');
+        } else {
+            growthContainer.classList.add('hidden');
+        }
+
+        // Show review button if there were wrong answers
+        if (wrongAnswers.length > 0) {
+            document.getElementById('review-btn').classList.remove('hidden');
+            buildReviewSection();
+        } else {
+            document.getElementById('review-btn').classList.add('hidden');
+        }
+    }
+
+    function buildReviewSection() {
+        const container = document.getElementById('wrong-answers-list');
+        container.innerHTML = '';
+
+        wrongAnswers.forEach((item, index) => {
+            const card = document.createElement('div');
+            card.className = 'p-4 bg-red-50 border-2 border-red-200 rounded-lg';
+
+            let passageHtml = '';
+            if (item.passage) {
+                passageHtml = `
+                    <div class="mb-2 p-2 bg-blue-50 rounded text-sm">
+                        <strong>📖 Story:</strong> ${item.passage}
+                    </div>
+                `;
+            }
+
+            card.innerHTML = `
+                <div class="flex items-start gap-2 mb-2">
+                    <span class="text-lg">❌</span>
+                    <strong class="text-red-800">Question ${index + 1}:</strong>
+                </div>
+                ${passageHtml}
+                <p class="font-semibold mb-2">${item.question}</p>
+                <div class="space-y-1 text-sm mb-3">
+                    <p><span class="text-red-600 font-bold">Your answer:</span> ${item.yourAnswer}</p>
+                    <p><span class="text-green-600 font-bold">Correct answer:</span> ${item.correctAnswer}</p>
+                </div>
+                <div class="mb-3">
+                    <p class="text-sm font-semibold text-gray-800 mb-2">Try again:</p>
+                    <div class="space-y-2 retry-options"></div>
+                    <p class="mt-2 text-sm font-bold" id="feedback-${index}"></p>
+                </div>
+                <div class="mt-3 p-3 bg-yellow-50 border border-yellow-300 rounded">
+                    <div class="flex items-start gap-2">
+                        <span class="text-xl">💡</span>
+                        <div>
+                            <strong class="text-yellow-800">Let's learn:</strong>
+                            <p class="text-sm text-gray-700 mt-1">${item.explanation}</p>
+                        </div>
+                    </div>
+                </div>
+            `;
+
+            const optionsContainer = card.querySelector('.retry-options');
+            const feedbackEl = card.querySelector(`#feedback-${index}`);
+
+            item.options.forEach((opt, idx) => {
+                const optBtn = document.createElement('button');
+                optBtn.className = 'w-full text-left px-3 py-2 rounded-lg border-2 border-gray-200 bg-white font-semibold text-sm hover:border-green-400 transition';
+                optBtn.innerText = opt;
+
+                optBtn.onclick = () => {
+                    if (item.corrected && idx !== item.correctIndex) {
+                        return; // Already corrected; avoid extra toggles
+                    }
+
+                    if (idx === item.correctIndex) {
+                        feedbackEl.innerText = 'You fixed it! Great job!';
+                        feedbackEl.className = 'mt-2 text-sm font-bold text-green-700';
+                        optBtn.classList.remove('border-gray-200');
+                        optBtn.classList.add('border-green-400', 'bg-green-50');
+                        item.corrected = true;
+
+                        // Dim other buttons once corrected
+                        Array.from(optionsContainer.children).forEach(btn => {
+                            btn.disabled = true;
+                            btn.classList.add('opacity-80');
+                        });
+                    } else {
+                        feedbackEl.innerText = 'Not quite. Check the hints and try another option!';
+                        feedbackEl.className = 'mt-2 text-sm font-bold text-red-700';
+                        optBtn.classList.remove('border-gray-200');
+                        optBtn.classList.add('border-red-300', 'bg-red-50');
+                    }
+                };
+
+                optionsContainer.appendChild(optBtn);
+            });
+
+            container.appendChild(card);
+        });
+    }
+
+    function toggleReview() {
+        const reviewSection = document.getElementById('review-section');
+        const reviewBtn = document.getElementById('review-btn');
+
+        if (reviewSection.classList.contains('hidden')) {
+            reviewSection.classList.remove('hidden');
+            reviewBtn.innerText = 'Hide Review';
+        } else {
+            reviewSection.classList.add('hidden');
+            reviewBtn.innerText = 'Review Mistakes';
+        }
+    }
+
+</script>
+</body>
+</html>
