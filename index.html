@@ -994,10 +994,22 @@
 
             const maskPixel = trackMaskCtx.getImageData(maskX, maskY, 1, 1).data;
             const alpha = maskPixel[3];
-            const brightness = (maskPixel[0] + maskPixel[1] + maskPixel[2]) / 3;
+            const r = maskPixel[0];
+            const g = maskPixel[1];
+            const b = maskPixel[2];
 
-            // Treat non-transparent, bright pixels as track
-            return alpha > 10 && brightness > 10;
+            // The mask is mostly dark track over bright/green grass.
+            // Allow dark pixels as drivable, but block bright grass/white areas.
+            const brightness = (r + g + b) / 3;
+            const isGrassGreen = g > 160 && g - Math.max(r, b) > 80;
+            const isBrightBackground = brightness > 245;
+
+            if (alpha > 10 && !isGrassGreen && !isBrightBackground) {
+                return true;
+            }
+
+            // If the mask pixel is ambiguous, fall back to the geometric track check
+            return checkOnTrack(canvasX, canvasY);
         }
 
         // Fallback: sample the painted track art
