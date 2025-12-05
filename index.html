@@ -2031,10 +2031,17 @@
     // Check if kart is on the valid track area
     function isOnValidTrack(x, y) {
         // Prefer the explicit mask overlay when available, fallback to centerline check otherwise
+        const geometryOnTrack = checkOnTrack(x, y);
+
         if (trackMaskLoaded && trackMaskCtx) {
-            return isPixelOnTrack(x, y);
+            // Never let a noisy or misaligned mask fully immobilize the karts –
+            // use it as the primary gate but still allow the geometric track
+            // definition to act as a safety net for valid start grids and
+            // narrow sections.
+            return isPixelOnTrack(x, y) || geometryOnTrack;
         }
-        return checkOnTrack(x, y);
+
+        return geometryOnTrack;
     }
 
     // Push kart back onto track if it goes past the barrier (invisible walls)
