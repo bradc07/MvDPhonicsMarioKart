@@ -1964,6 +1964,9 @@
 
     // Check if kart is on the valid track area using pixel color detection
     function isOnValidTrack(x, y) {
+        // TEMPORARILY DISABLED - always return true to debug movement issue
+        return true;
+
         // Use pixel-based collision detection for tracks with images
         if (trackCollisionCtx && trackImgLoaded) {
             return isPixelOnTrack(x, y);
@@ -1974,6 +1977,9 @@
 
     // Push kart back onto track if it goes past the barrier (invisible walls)
     function enforceTrackBarrier(kart) {
+        // TEMPORARILY DISABLED - skip all barrier enforcement to debug movement
+        return;
+
         // Safety check - don't process if kart position is invalid
         if (isNaN(kart.x) || isNaN(kart.y) || kart.x === undefined || kart.y === undefined) {
             console.error('Kart has invalid position, resetting');
