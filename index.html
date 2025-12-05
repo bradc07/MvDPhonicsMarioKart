@@ -959,7 +959,7 @@
 
         // Bounds check
         if (imgX < 0 || imgX >= trackImgWidth || imgY < 0 || imgY >= trackImgHeight) {
-            return false; // Outside image = off track
+            return true; // Outside image bounds = allow (safety)
         }
 
         // Get pixel color at this position
@@ -968,14 +968,23 @@
         const g = pixelData[1];
         const b = pixelData[2];
 
-        // Calculate grayscale value and check if it's dark gray (tarmac)
-        // Dark gray tarmac is roughly RGB(60-120, 60-120, 60-120)
-        // Also include white center lines as valid track
-        const isGray = Math.abs(r - g) < 30 && Math.abs(g - b) < 30 && Math.abs(r - b) < 30;
-        const isDarkGray = isGray && r >= 40 && r <= 140; // Dark gray range for tarmac
-        const isWhite = r > 200 && g > 200 && b > 200; // White center lines
+        // Calculate brightness
+        const brightness = (r + g + b) / 3;
 
-        return isDarkGray || isWhite;
+        // Dark gray tarmac detection:
+        // - Low to medium brightness (dark colors)
+        // - Relatively neutral (gray-ish, not too colorful)
+        // White center lines are also valid
+        const isGrayish = Math.abs(r - g) < 50 && Math.abs(g - b) < 50 && Math.abs(r - b) < 50;
+        const isDarkGray = isGrayish && brightness >= 30 && brightness <= 160;
+        const isWhite = brightness > 200; // White center lines
+
+        // Also reject bright greens (grass) and reds (barriers)
+        const isGreen = g > r + 30 && g > b + 30 && g > 100;
+        const isRed = r > g + 30 && r > b + 30 && r > 100;
+
+        // Track = dark gray or white, but NOT green or red
+        return (isDarkGray || isWhite) && !isGreen && !isRed;
     }
 
     function getAiSpeedMod() {
@@ -1958,45 +1967,55 @@
 
     // Push kart back onto track if it goes past the barrier (invisible walls)
     function enforceTrackBarrier(kart) {
+        // Safety check - don't process if kart position is invalid
+        if (isNaN(kart.x) || isNaN(kart.y) || kart.x === undefined || kart.y === undefined) {
+            console.error('Kart has invalid position, resetting');
+            kart.x = canvas.width / 2;
+            kart.y = canvas.height / 2;
+            kart.speed = 0;
+            return;
+        }
+
         // Use pixel-based collision detection for tracks with images
         if (trackCollisionCtx && trackImgLoaded) {
             // Check if kart is currently on a valid track pixel
             if (!isPixelOnTrack(kart.x, kart.y)) {
                 // Kart is off track - find nearest valid track position
                 // Search in expanding circles to find the nearest track pixel
-                const maxSearchRadius = 50;
+                const maxSearchRadius = 150; // Large search radius
                 let foundTrack = false;
                 let nearestX = kart.x;
                 let nearestY = kart.y;
 
                 // Search in a spiral pattern
-                for (let radius = 1; radius <= maxSearchRadius && !foundTrack; radius += 2) {
+                for (let radius = 5; radius <= maxSearchRadius && !foundTrack; radius += 5) {
                     // Check points around the current position at this radius
-                    const numPoints = Math.max(8, radius * 2);
+                    const numPoints = Math.max(16, radius * 2);
                     for (let i = 0; i < numPoints && !foundTrack; i++) {
                         const angle = (i / numPoints) * Math.PI * 2;
                         const testX = kart.x + Math.cos(angle) * radius;
                         const testY = kart.y + Math.sin(angle) * radius;
 
-                        if (isPixelOnTrack(testX, testY)) {
-                            nearestX = testX;
-                            nearestY = testY;
-                            foundTrack = true;
+                        // Bounds check
+                        if (testX >= 0 && testX < canvas.width && testY >= 0 && testY < canvas.height) {
+                            if (isPixelOnTrack(testX, testY)) {
+                                nearestX = testX;
+                                nearestY = testY;
+                                foundTrack = true;
+                            }
                         }
                     }
                 }
 
-                if (foundTrack) {
+                if (foundTrack && !isNaN(nearestX) && !isNaN(nearestY)) {
                     // Push kart back onto track
                     kart.x = nearestX;
                     kart.y = nearestY;
                     kart.speed *= 0.3; // Strong speed reduction on wall hit
                 } else {
-                    // Couldn't find track nearby, use centerline as fallback
-                    const info = getTrackInfo(kart.x, kart.y);
-                    kart.x = info.nearestX;
-                    kart.y = info.nearestY;
-                    kart.speed *= 0.3;
+                    // Couldn't find track nearby - just slow down, don't move
+                    // This prevents karts from being pushed to invalid positions
+                    kart.speed *= 0.5;
                 }
             }
             return;
