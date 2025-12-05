@@ -927,11 +927,20 @@
     trackImg.src = 'track.png';
     let trackImgLoaded = false;
 
+    // Track mask overlay to precisely gate where karts can drive
+    const trackMaskImg = new Image();
+    trackMaskImg.src = 'track_mask.png.png';
+    let trackMaskLoaded = false;
+
     // Offscreen canvas for pixel-based collision detection
     let trackCollisionCanvas = null;
     let trackCollisionCtx = null;
+    let trackMaskCanvas = null;
+    let trackMaskCtx = null;
     let trackImgWidth = 0;
     let trackImgHeight = 0;
+    let trackMaskWidth = 0;
+    let trackMaskHeight = 0;
 
     trackImg.onload = () => {
         trackImgLoaded = true;
@@ -949,17 +958,53 @@
     };
     trackImg.onerror = () => { console.error('Failed to load track.png'); trackImgLoaded = false; };
 
+    trackMaskImg.onload = () => {
+        trackMaskLoaded = true;
+        trackMaskWidth = trackMaskImg.width;
+        trackMaskHeight = trackMaskImg.height;
+
+        trackMaskCanvas = document.createElement('canvas');
+        trackMaskCanvas.width = trackMaskWidth;
+        trackMaskCanvas.height = trackMaskHeight;
+        trackMaskCtx = trackMaskCanvas.getContext('2d', { willReadFrequently: true });
+        trackMaskCtx.drawImage(trackMaskImg, 0, 0);
+        console.log('Track mask loaded for pixel-perfect collision');
+    };
+    trackMaskImg.onerror = () => { console.error('Failed to load track_mask.png.png'); trackMaskLoaded = false; };
+
     // Debug counter for logging
     let pixelDebugCounter = 0;
 
-    // Check if a pixel at given canvas coordinates is on the dark tarmac track
-    // SIMPLE APPROACH: Reject green grass and red/white barriers, accept everything else
+    function mapCanvasToImageCoords(canvasX, canvasY, imgWidth, imgHeight) {
+        return {
+            x: Math.floor((canvasX / canvas.width) * imgWidth),
+            y: Math.floor((canvasY / canvas.height) * imgHeight)
+        };
+    }
+
+    // Check if a pixel at given canvas coordinates is on the drivable surface using the mask overlay
     function isPixelOnTrack(canvasX, canvasY) {
+        // Prefer the explicit mask if available
+        if (trackMaskCtx && trackMaskLoaded) {
+            const { x: maskX, y: maskY } = mapCanvasToImageCoords(canvasX, canvasY, trackMaskWidth, trackMaskHeight);
+
+            if (maskX < 0 || maskX >= trackMaskWidth || maskY < 0 || maskY >= trackMaskHeight) {
+                return false; // Outside the mask is not drivable
+            }
+
+            const maskPixel = trackMaskCtx.getImageData(maskX, maskY, 1, 1).data;
+            const alpha = maskPixel[3];
+
+            // Treat any non-transparent pixel as valid track. The mask uses transparency to
+            // outline the drivable surface, so we shouldn't exclude dark pixels (e.g., if the
+            // mask art is black on transparent) by requiring brightness.
+            return alpha > 10;
+        }
+
+        // Fallback: sample the painted track art
         if (!trackCollisionCtx || !trackImgLoaded) return true; // Default to on-track if not ready
 
-        // Convert canvas coordinates to track image coordinates
-        const imgX = Math.floor((canvasX / canvas.width) * trackImgWidth);
-        const imgY = Math.floor((canvasY / canvas.height) * trackImgHeight);
+        const { x: imgX, y: imgY } = mapCanvasToImageCoords(canvasX, canvasY, trackImgWidth, trackImgHeight);
 
         // Bounds check
         if (imgX < 0 || imgX >= trackImgWidth || imgY < 0 || imgY >= trackImgHeight) {
@@ -1028,6 +1073,9 @@
         update() {
             if (this.finished) return;
 
+            const prevX = this.x;
+            const prevY = this.y;
+
             // Check if spinning from red shell
             if (!this.isPlayer && this.spinUntil > Date.now()) {
                 // Spin in place
@@ -1052,6 +1100,13 @@
 
                 // Simple friction
                 this.speed *= FRICTION;
+
+                // Clamp movement to the painted track mask
+                if (!isOnValidTrack(this.x, this.y)) {
+                    this.x = prevX;
+                    this.y = prevY;
+                    this.speed = Math.min(this.speed, OFFROAD_SPEED * 0.5);
+                }
             }
         }
 
@@ -1964,7 +2019,10 @@
 
     // Check if kart is on the valid track area
     function isOnValidTrack(x, y) {
-        // Use simple centerline-based check (more reliable than pixel detection)
+        // Prefer the explicit mask overlay when available, fallback to centerline check otherwise
+        if (trackMaskLoaded && trackMaskCtx) {
+            return isPixelOnTrack(x, y);
+        }
         return checkOnTrack(x, y);
     }
 
