@@ -733,14 +733,14 @@
                 {x: 120, y: 310}, {x: 120, y: 350}, {x: 100, y: 320}, {x: 100, y: 360}
             ],
             itemBoxes: [
-                {x: 400, y: 70, active: true, type: 'question'},
-                {x: 740, y: 280, active: true, type: 'question'},
-                {x: 400, y: 410, active: true, type: 'question'}
+                {x: 400, y: 140, active: true, type: 'question'},
+                {x: 700, y: 350, active: true, type: 'question'},
+                {x: 400, y: 550, active: true, type: 'question'}
             ],
             powerupBoxes: [
-                {x: 180, y: 110, active: false, type: 'powerup'},
-                {x: 680, y: 150, active: false, type: 'powerup'},
-                {x: 250, y: 380, active: false, type: 'powerup'}
+                {x: 200, y: 160, active: false, type: 'powerup'},
+                {x: 650, y: 200, active: false, type: 'powerup'},
+                {x: 280, y: 500, active: false, type: 'powerup'}
             ],
             trees: [] // No procedural trees - using track image
         }
@@ -953,6 +953,7 @@
     let pixelDebugCounter = 0;
 
     // Check if a pixel at given canvas coordinates is on the dark tarmac track
+    // SIMPLE APPROACH: Reject green grass and red/white barriers, accept everything else
     function isPixelOnTrack(canvasX, canvasY) {
         if (!trackCollisionCtx || !trackImgLoaded) return true; // Default to on-track if not ready
 
@@ -971,27 +972,23 @@
         const g = pixelData[1];
         const b = pixelData[2];
 
-        // Calculate brightness
-        const brightness = (r + g + b) / 3;
+        // Simple detection: reject GREEN (grass) and bright RED (barriers)
+        // Green grass: green channel is dominant and high
+        const isGrass = g > 100 && g > r + 20 && g > b + 20;
 
-        // Dark gray tarmac detection:
-        // - Low to medium brightness (dark colors)
-        // - Relatively neutral (gray-ish, not too colorful)
-        // White center lines are also valid
-        const isGrayish = Math.abs(r - g) < 50 && Math.abs(g - b) < 50 && Math.abs(r - b) < 50;
-        const isDarkGray = isGrayish && brightness >= 30 && brightness <= 160;
-        const isWhite = brightness > 200; // White center lines
+        // Red barriers: red channel is dominant and high
+        const isRedBarrier = r > 150 && r > g + 50 && r > b + 50;
 
-        // Also reject bright greens (grass) and reds (barriers)
-        const isGreen = g > r + 30 && g > b + 30 && g > 100;
-        const isRed = r > g + 30 && r > b + 30 && r > 100;
+        // White/light gray barriers: very bright
+        const isWhiteBarrier = r > 200 && g > 200 && b > 200;
 
-        const onTrack = (isDarkGray || isWhite) && !isGreen && !isRed;
+        // On track = NOT grass, NOT red barrier, NOT white barrier
+        const onTrack = !isGrass && !isRedBarrier && !isWhiteBarrier;
 
-        // Debug logging (every 60 frames)
+        // Debug logging (every 120 frames)
         pixelDebugCounter++;
-        if (pixelDebugCounter % 60 === 0) {
-            console.log(`Pixel check at (${Math.round(canvasX)}, ${Math.round(canvasY)}) -> img(${imgX}, ${imgY}): RGB(${r},${g},${b}) brightness=${Math.round(brightness)} onTrack=${onTrack}`);
+        if (pixelDebugCounter % 120 === 0) {
+            console.log(`Pixel at img(${imgX},${imgY}): RGB(${r},${g},${b}) grass=${isGrass} red=${isRedBarrier} white=${isWhiteBarrier} onTrack=${onTrack}`);
         }
 
         return onTrack;
