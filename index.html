@@ -926,8 +926,57 @@
     const trackImg = new Image();
     trackImg.src = 'track.png';
     let trackImgLoaded = false;
-    trackImg.onload = () => { trackImgLoaded = true; console.log('Track image loaded:', trackImg.width, 'x', trackImg.height); };
+
+    // Offscreen canvas for pixel-based collision detection
+    let trackCollisionCanvas = null;
+    let trackCollisionCtx = null;
+    let trackImgWidth = 0;
+    let trackImgHeight = 0;
+
+    trackImg.onload = () => {
+        trackImgLoaded = true;
+        trackImgWidth = trackImg.width;
+        trackImgHeight = trackImg.height;
+        console.log('Track image loaded:', trackImgWidth, 'x', trackImgHeight);
+
+        // Create offscreen canvas for pixel collision detection
+        trackCollisionCanvas = document.createElement('canvas');
+        trackCollisionCanvas.width = trackImgWidth;
+        trackCollisionCanvas.height = trackImgHeight;
+        trackCollisionCtx = trackCollisionCanvas.getContext('2d', { willReadFrequently: true });
+        trackCollisionCtx.drawImage(trackImg, 0, 0);
+        console.log('Track collision canvas ready for pixel detection');
+    };
     trackImg.onerror = () => { console.error('Failed to load track.png'); trackImgLoaded = false; };
+
+    // Check if a pixel at given canvas coordinates is on the dark tarmac track
+    function isPixelOnTrack(canvasX, canvasY) {
+        if (!trackCollisionCtx || !trackImgLoaded) return true; // Default to on-track if not ready
+
+        // Convert canvas coordinates to track image coordinates
+        const imgX = Math.floor((canvasX / canvas.width) * trackImgWidth);
+        const imgY = Math.floor((canvasY / canvas.height) * trackImgHeight);
+
+        // Bounds check
+        if (imgX < 0 || imgX >= trackImgWidth || imgY < 0 || imgY >= trackImgHeight) {
+            return false; // Outside image = off track
+        }
+
+        // Get pixel color at this position
+        const pixelData = trackCollisionCtx.getImageData(imgX, imgY, 1, 1).data;
+        const r = pixelData[0];
+        const g = pixelData[1];
+        const b = pixelData[2];
+
+        // Calculate grayscale value and check if it's dark gray (tarmac)
+        // Dark gray tarmac is roughly RGB(60-120, 60-120, 60-120)
+        // Also include white center lines as valid track
+        const isGray = Math.abs(r - g) < 30 && Math.abs(g - b) < 30 && Math.abs(r - b) < 30;
+        const isDarkGray = isGray && r >= 40 && r <= 140; // Dark gray range for tarmac
+        const isWhite = r > 200 && g > 200 && b > 200; // White center lines
+
+        return isDarkGray || isWhite;
+    }
 
     function getAiSpeedMod() {
         const config = DIFFICULTY_SETTINGS[currentDifficulty] || DIFFICULTY_SETTINGS.mild;
@@ -1897,14 +1946,11 @@
         return { distance: minDist, nearestX: nearestX, nearestY: nearestY };
     }
 
-    // Check if kart is on the valid track area (inside outer boundary, outside inner boundary)
+    // Check if kart is on the valid track area using pixel color detection
     function isOnValidTrack(x, y) {
-        // If boundaries are defined, use polygon-based collision
-        if (OUTER_BOUNDARY.length > 0 && INNER_BOUNDARY.length > 0) {
-            const insideOuter = pointInPolygon(x, y, OUTER_BOUNDARY);
-            const insideInner = pointInPolygon(x, y, INNER_BOUNDARY);
-            // Valid track = inside outer boundary AND outside inner boundary
-            return insideOuter && !insideInner;
+        // Use pixel-based collision detection for tracks with images
+        if (trackCollisionCtx && trackImgLoaded) {
+            return isPixelOnTrack(x, y);
         }
         // Fallback to centerline-based check
         return checkOnTrack(x, y);
@@ -1912,49 +1958,51 @@
 
     // Push kart back onto track if it goes past the barrier (invisible walls)
     function enforceTrackBarrier(kart) {
-        // Use polygon-based collision for tracks with defined boundaries
-        if (OUTER_BOUNDARY.length > 0 && INNER_BOUNDARY.length > 0) {
-            const insideOuter = pointInPolygon(kart.x, kart.y, OUTER_BOUNDARY);
-            const insideInner = pointInPolygon(kart.x, kart.y, INNER_BOUNDARY);
+        // Use pixel-based collision detection for tracks with images
+        if (trackCollisionCtx && trackImgLoaded) {
+            // Check if kart is currently on a valid track pixel
+            if (!isPixelOnTrack(kart.x, kart.y)) {
+                // Kart is off track - find nearest valid track position
+                // Search in expanding circles to find the nearest track pixel
+                const maxSearchRadius = 50;
+                let foundTrack = false;
+                let nearestX = kart.x;
+                let nearestY = kart.y;
 
-            // Check if kart went outside the outer boundary
-            if (!insideOuter) {
-                const nearestOuter = nearestPointOnPolygon(kart.x, kart.y, OUTER_BOUNDARY);
-                // Push kart back inside with a small margin
-                const dx = nearestOuter.nearestX - kart.x;
-                const dy = nearestOuter.nearestY - kart.y;
-                const dist = Math.sqrt(dx * dx + dy * dy);
-                if (dist > 0) {
-                    const pushMargin = 5; // Push slightly inside the boundary
-                    kart.x = nearestOuter.nearestX - (dx / dist) * pushMargin;
-                    kart.y = nearestOuter.nearestY - (dy / dist) * pushMargin;
-                    kart.speed *= 0.4; // Strong speed reduction on wall hit
+                // Search in a spiral pattern
+                for (let radius = 1; radius <= maxSearchRadius && !foundTrack; radius += 2) {
+                    // Check points around the current position at this radius
+                    const numPoints = Math.max(8, radius * 2);
+                    for (let i = 0; i < numPoints && !foundTrack; i++) {
+                        const angle = (i / numPoints) * Math.PI * 2;
+                        const testX = kart.x + Math.cos(angle) * radius;
+                        const testY = kart.y + Math.sin(angle) * radius;
+
+                        if (isPixelOnTrack(testX, testY)) {
+                            nearestX = testX;
+                            nearestY = testY;
+                            foundTrack = true;
+                        }
+                    }
                 }
-                return;
-            }
 
-            // Check if kart went inside the inner boundary (center island)
-            if (insideInner) {
-                const nearestInner = nearestPointOnPolygon(kart.x, kart.y, INNER_BOUNDARY);
-                // Push kart back outside the inner boundary
-                const dx = kart.x - nearestInner.nearestX;
-                const dy = kart.y - nearestInner.nearestY;
-                const dist = Math.sqrt(dx * dx + dy * dy);
-                if (dist > 0) {
-                    const pushMargin = 5; // Push slightly outside the inner boundary
-                    kart.x = nearestInner.nearestX + (dx / dist) * pushMargin;
-                    kart.y = nearestInner.nearestY + (dy / dist) * pushMargin;
+                if (foundTrack) {
+                    // Push kart back onto track
+                    kart.x = nearestX;
+                    kart.y = nearestY;
+                    kart.speed *= 0.3; // Strong speed reduction on wall hit
                 } else {
-                    // Kart is exactly on boundary, push outward based on track center
-                    kart.x = nearestInner.nearestX + 10;
+                    // Couldn't find track nearby, use centerline as fallback
+                    const info = getTrackInfo(kart.x, kart.y);
+                    kart.x = info.nearestX;
+                    kart.y = info.nearestY;
+                    kart.speed *= 0.3;
                 }
-                kart.speed *= 0.4; // Strong speed reduction on wall hit
-                return;
             }
-            return; // Kart is on valid track
+            return;
         }
 
-        // Fallback to centerline-based collision for tracks without boundaries
+        // Fallback to centerline-based collision for tracks without pixel detection
         const info = getTrackInfo(kart.x, kart.y);
         const barrierLimit = info.trackHalfWidth + 5; // Small margin past track edge
 
